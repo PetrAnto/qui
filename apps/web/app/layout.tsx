@@ -9,12 +9,17 @@ import { TabBar } from '../components/TabBar';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'indenoi — what is happening around you',
+  title: 'QUI — the people around you',
   description:
-    'A local-first social product: see what people near you actually do, and turn it into meeting them. Demo build with synthetic data.',
-  // Nothing here is meant to be indexed or shared: it is a demo over invented
-  // people, and a search engine result would misrepresent it as a live service.
+    'QUI is a local social world: see the people, practices and opportunities close enough to matter. Synthetic demo — not a live service.',
+  // Demo over invented people; do not let a search engine treat it as live.
   robots: { index: false, follow: false },
+  openGraph: {
+    title: 'QUI',
+    description: 'Make the people around us visible again.',
+    siteName: 'QUI',
+    type: 'website',
+  },
 };
 
 export const viewport: Viewport = {

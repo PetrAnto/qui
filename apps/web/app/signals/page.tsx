@@ -19,9 +19,8 @@ function parseType(value: string | undefined): SignalType | null {
 /**
  * Signals: the four things a person can say out loud in a place.
  *
- * Ask, Offer, Join, Event. There is no fifth intent and in particular no
- * romantic one — that is not deferred, it is out of this product surface
- * entirely (ADR-0009).
+ * Ask, Offer, Join, Event. The current MVP has no fifth intent. Adult Mutual
+ * Signals are a later, isolated track (ADR-0013) — not this screen.
  */
 export default async function SignalsPage({
   searchParams,

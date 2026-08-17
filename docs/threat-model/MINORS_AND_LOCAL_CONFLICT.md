@@ -108,10 +108,11 @@ This is a release blocker, not a technical gap.
 
 ## Deliberate absences that matter here
 
-- **No romantic surface at all** ([ADR-0009](../adr/0009-signal-intent-scope.md),
-  `INV-ROMANCE-1`). This removes the largest category of adult–minor risk in
-  social products, and removes the ambiguity that lets an approach be framed as
-  normal product use.
+- **No romantic surface in the current MVP** (`INV-ROMANCE-1` as an MVP
+  constraint; [ADR-0013](../adr/0013-romance-deferred-not-forbidden.md)).
+  This removes the largest category of adult–minor risk *today*. Any future
+  adult Mutual Signal must remain structurally unavailable to minors — that
+  isolation is the LOCKED property, not “romance can never exist”.
 - **No person-level location** (`INV-GEO-1`). A minor's signals say which city
   they are in, never where they are.
 - **No public counters or scores** — nothing a minor can be flattered by, and

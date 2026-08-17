@@ -4,54 +4,30 @@
 
 ## Timestamp
 
-- Recovered: `2026-08-17T10:59:07Z`
-- Mission tranche complete: `2026-08-17T11:20:00Z` (approx)
+- Recovered: `2026-08-17T15:39:00Z`
+- PR A in progress on `feat/qui-canon-reconciliation`
 
 ## Repository
 
 - Path: `/home/petranto/projects/indenoi`
 - GitHub: `https://github.com/PetrAnto/indenoi` (private)
-- **Final main SHA:** `c9cc8b6459b3fcdee29be3e723b7bbde8d8f58b7`
-- Prior demo land SHA: `2a42f08c9fdef7229dff1fb4af3be460841a7dc5` (PR #21)
-- Hardening SHA: `c9cc8b6…` (PR #22)
-- Working tree: clean on `main`
+- **origin/main at recovery:** `f5a0b2b9fb5fb9ad88b4778898996910cfe55182` (PR #24)
+- Active branch: `feat/qui-canon-reconciliation`
 
-## Completed
+## This tranche
 
-- Issues **#1–#20 all CLOSED**
-- PRs **#21**, **#22** merged (squash)
-- Local + CI verification green for landed code
-- OpenNext build + local workerd preview smoke documented
-- Adversarial release review recorded (`docs/RELEASE_REVIEW.md`)
-- Production deploy **explicitly NO-GO**
+1. PR A (now): QUI canon, brand, status vocabulary, ADRs 0013–0015
+2. PR B: OSS licence + secret audit + rename/public if clean
+3. PR C: arbitrary worldwide city activation
+4. PR D: public synthetic demo if CF auth available
 
-## Active issue
+## AGENTS.md
 
-- None open.
+Host-protected: write was blocked without user consent. Deploy-policy override
+lives in ADR-0015 + RELEASE_CHECKLIST + this file. Do not retry writing AGENTS.md
+via a workaround.
 
-## Exact next action (future session / human)
+## Exact next action
 
-Only external/human work remains:
-
-1. Legal entity + privacy/DPIA/retention/DSR
-2. Cloudflare account binding + D1 provision + migration apply
-3. Rate limits, staffed moderation, recovery
-4. Then flip production flags one-by-one per RELEASE_CHECKLIST
-
-Do **not** auto-deploy from agents while AGENTS.md + RELEASE_CHECKLIST blockers hold.
-
-## Deployed environment URLs
-
-- None.
-
-## Cloudflare resources created
-
-- None (project-specific).
-
-## Genuine external blockers
-
-1. CF account binding / D1 id
-2. Legal/controller prerequisites
-3. Production auth/KYC/media contracts
-4. Domain purchase (forbidden to agents)
-5. Staffed moderation + abuse controls
+Finish PR A (tests + PR), then PR C geography (highest product gap), then OSS
+audit, then demo deploy.

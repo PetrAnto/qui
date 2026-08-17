@@ -94,11 +94,11 @@ violation is irreversible: a coordinate that leaked is a coordinate that leaked.
 | `INV-PROFILE-1` | Private trust state stays private. Attestations are reduced to coarse booleans in any public projection — never the method, provider reference, threshold or timestamps. | `projections.ts` |
 | `INV-ANALYTICS-1` | The analytics event shape is closed: 20 named events, no free-form payload. Time-spent is not collected. | `analytics/events.ts` |
 
-### Product scope
+### Product scope (current MVP surface)
 
 | ID | Rule | Enforced in |
 |---|---|---|
-| `INV-ROMANCE-1` | The product has no romantic surface: no romantic intent in the signal vocabulary, no romantic capability. Enforced structurally by the closed `SIGNAL_TYPES` union. | `types.ts` |
+| `INV-ROMANCE-1` | **Current MVP constraint:** this build has no romantic surface — no romantic intent in `SIGNAL_TYPES`, no romantic capability. This is not a claim that QUI can never have adult-only Mutual Signals. See [ADR-0013](adr/0013-romance-deferred-not-forbidden.md). | `types.ts` |
 
 ### Build posture
 

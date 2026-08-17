@@ -17,10 +17,12 @@ admits 15-year-olds and is designed for towns where everyone is findable.
 
 ### Geography is a dataset
 
-`packages/geo/src/gazetteer.ts` holds 6 countries, 17 regions and 34 cities as
-rows. **Nothing in the application may branch on which row it is.** Adding a
-city is adding a row; there is no per-city configuration, no per-city feature
-flag and no privileged city.
+`packages/geo` holds administrative geography as data. **Nothing in the
+application may branch on which row it is.** Adding a city is adding data;
+there is no per-city configuration, no per-city feature flag and no
+privileged city. A hand-curated seed of a few dozen cities is **not** the
+product boundary — users must be able to search and activate arbitrary cities
+worldwide without a code change.
 
 Scopes are administrative and hierarchical (`country` → `region` → `city` →
 `neighbourhood`), identified by GeoNames ids where one exists. Provenance,
@@ -53,11 +55,11 @@ administrative scope*.
 ranking rule is automatically identical everywhere. The highest-harm data in the
 product simply does not exist, so it cannot leak, be subpoenaed, or be sold.
 
-**Bad.** No proximity features, ever, while this stands — no "3 people within
-500m", which is a genuinely useful thing the product forgoes. City-level
-granularity is coarse for a large city like Paris; `neighbourhood` exists in the
-type system and is deliberately unused, because finer scopes narrow a person's
-location and need their own analysis.
+**Bad.** Exact metre-level “people near you” is forbidden while `INV-GEO-1`
+stands. Coarse city/area attachment, and future privacy-preserving travel-time
+relevance, are not forbidden. City-level granularity is coarse for a large
+city like Paris; `neighbourhood` exists in the type system and is unused
+until it has its own analysis.
 
 **Neutral.** Every gazetteer entry is currently `verified: false` because the
 rows were hand-entered rather than ingested from the official export. Verifying

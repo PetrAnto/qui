@@ -55,9 +55,10 @@ protection:
 - Adult-audience content never reaches a minor surface (`INV-AGE-4`).
 - Hosting and vouching require 18+ — both carry responsibility over other
   people, including the power to exclude someone from a space.
-- No romantic or dating surface exists at all
-  ([ADR-0009](../adr/0009-signal-intent-scope.md), `INV-ROMANCE-1`), which
-  removes the single largest category of adult–minor risk in social products.
+- No romantic or dating surface exists in the **current MVP**
+  (`INV-ROMANCE-1` as an MVP constraint). Any future adult romantic
+  capability must remain structurally unavailable to minors
+  ([ADR-0013](../adr/0013-romance-deferred-not-forbidden.md)).
 
 ## Age assurance — what we do and do not claim
 

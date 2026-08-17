@@ -6,7 +6,8 @@
  * policy code, because a type that cannot express a thing is a stronger
  * guarantee than a check that can be forgotten:
  *
- *  - there is no romantic/dating signal type (INV-ROMANCE-1);
+ *  - there is no romantic/dating signal type in this MVP (INV-ROMANCE-1);
+ *    adult Mutual Signals are deferred, not eternally forbidden (ADR-0013);
  *  - no person-attached shape carries coordinates (INV-GEO-1).
  */
 

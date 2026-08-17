@@ -1,7 +1,10 @@
-# ADR-0009 — Signal intent scope: four intents, and no romantic surface
+# ADR-0009 — Signal intent scope: four intents in the current MVP
 
-**Status: LOCKED.** The romantic exclusion is **OUT OF SCOPE**, not deferred.
-Adding intents to the union is a normal amendment; adding a romantic one is not.
+**Status: LOCKED** for the current MVP vocabulary (`ask` / `offer` / `join` /
+`event`). The claim that romance is permanently OUT OF SCOPE is **superseded**
+by [ADR-0013](0013-romance-deferred-not-forbidden.md). Adding non-romantic
+intents to the union remains a normal amendment. Adding a romantic intent
+still requires ADR-0013’s dedicated process — it is not a config toggle.
 
 ## Context
 
@@ -26,10 +29,10 @@ product is *for*, and — more importantly — what it is not for.
 Extending the union is how *Learn*, *Teach* or *Project* would arrive later —
 a type change, an ADR, and a migration.
 
-**There is no romantic or dating intent, and there will not be one in this
-product surface** (`INV-ROMANCE-1`). This is enforced structurally: the union
-cannot express it, and there is no romantic capability. It is not a backlog
-item, not a v2 feature, and not something to be revisited when growth is slow.
+**There is no romantic or dating intent in the current MVP** (`INV-ROMANCE-1`
+as an MVP safety constraint). The union cannot express it today. Long-term
+adult Mutual Signals are **DEFERRED**, not eternally forbidden — see
+[ADR-0013](0013-romance-deferred-not-forbidden.md).
 
 ### Why romance is excluded, specifically
 
