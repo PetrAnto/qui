@@ -8,8 +8,12 @@ import { ports } from '../../../lib/store';
 
 export const dynamic = 'force-dynamic';
 
-/** City search. Any city in the gazetteer, no country privileged. */
-export const GET = guarded(async (_actorId, request) => {
+/**
+ * City search is a public gazetteer lookup. It names places, not people, so it
+ * is available before a session exists (onboarding). Adding or removing a
+ * place still requires an actor.
+ */
+export async function GET(request: Request): Promise<Response> {
   const query = new URL(request.url).searchParams.get('q') ?? '';
   return json({
     cities: searchCities(query).map((scope) => ({
@@ -19,7 +23,7 @@ export const GET = guarded(async (_actorId, request) => {
       label: describeScope(scope.id),
     })),
   });
-});
+}
 
 export const POST = guarded(async (actorId, request) => {
   const body = await readJson(request);

@@ -15,6 +15,10 @@ interface CityOption {
   readonly countryCode: string;
 }
 
+interface CityResult extends CityOption {
+  readonly label?: string;
+}
+
 const STEPS = ['age', 'place', 'doing', 'ready'] as const;
 type Step = (typeof STEPS)[number];
 
@@ -37,11 +41,13 @@ function facetList(value: string): string[] {
  * that is the thing that decides whether you can publish there as a local, and
  * a GPS fix cannot tell us any of it.
  */
-export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
+export function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('age');
   const [age, setAge] = useState('');
-  const [cityId, setCityId] = useState(cities[0]?.id ?? '');
+  const [city, setCity] = useState<CityOption | null>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<readonly CityResult[]>([]);
   const [kind, setKind] = useState<GeoAttachmentKind>('resident');
   const [practices, setPractices] = useState('');
   const [interests, setInterests] = useState('');
@@ -56,7 +62,7 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
     setError(null);
     const result = await api.post<{ userId: string }>('/api/onboarding', {
       age: ageNumber,
-      geoScopeId: cityId,
+      geoScopeId: city?.id ?? '',
       kind,
       practices: facetList(practices),
       interests: facetList(interests),
@@ -121,24 +127,56 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
           <header className="pagehead">
             <h2>Where are you?</h2>
             <p className="pagehead__sub">
-              Pick a city and tell us what it is to you. No location permission, ever — this is a
-              relationship, not a coordinate.
+              Search any city. No location permission, ever — this is a relationship, not a
+              coordinate. Exploring is free; speaking as a local is the part that asks for a tie.
             </p>
           </header>
           <label className="field">
             <span>City</span>
-            <select
-              className="select"
-              value={cityId}
-              onChange={(event) => setCityId(event.target.value)}
-            >
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} · {city.countryCode}
-                </option>
-              ))}
-            </select>
+            <input
+              className="input"
+              type="search"
+              value={query}
+              placeholder="Ajaccio, Kilrush, Tokyo…"
+              onChange={(event) => {
+                const value = event.target.value;
+                setQuery(value);
+                if (value.trim().length === 0) {
+                  setResults([]);
+                  return;
+                }
+                void api
+                  .get<{ cities: CityResult[] }>(`/api/cities?q=${encodeURIComponent(value)}`)
+                  .then((result) => {
+                    if (result.ok) setResults(result.value.cities);
+                  });
+              }}
+            />
           </label>
+          {city !== null ? (
+            <p className="muted">
+              Selected: {city.name} · {city.countryCode}
+            </p>
+          ) : (
+            <p className="faint">Type at least a few letters. Any city on earth is fair game.</p>
+          )}
+          <div className="searchresults">
+            {results.map((hit) => (
+              <button
+                key={hit.id}
+                type="button"
+                className="result"
+                onClick={() => {
+                  setCity(hit);
+                  setQuery(`${hit.name}`);
+                  setResults([]);
+                }}
+              >
+                <span>{hit.name}</span>
+                <span className="faint spacer">{hit.countryCode}</span>
+              </button>
+            ))}
+          </div>
           <label className="field">
             <span>What is it to you?</span>
             <select
@@ -153,7 +191,12 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
               ))}
             </select>
           </label>
-          <button type="button" className="btn btn--primary btn--block" onClick={() => setStep('doing')}>
+          <button
+            type="button"
+            className="btn btn--primary btn--block"
+            disabled={city === null}
+            onClick={() => setStep('doing')}
+          >
             Continue
           </button>
           <button type="button" className="btn btn--ghost btn--block" onClick={() => setStep('age')}>

@@ -22,6 +22,7 @@ import type {
   Thread,
   VouchEvidence,
 } from '@indenoi/core';
+import { getScope } from '@indenoi/geo';
 
 /**
  * The dataset the repository is built from. The demo seed produces one of
@@ -129,7 +130,14 @@ export function createInMemoryRepository(seed: SeedData = EMPTY_SEED): Repositor
 
     // geography -------------------------------------------------------------
     listGeoScopes: async () => [...scopes.values()],
-    getGeoScope: async (id) => scopes.get(id) ?? null,
+    getGeoScope: async (id) => {
+      const existing = scopes.get(id);
+      if (existing !== undefined) return existing;
+      const resolved = getScope(id);
+      if (resolved === undefined) return null;
+      scopes.set(resolved.id, resolved);
+      return resolved;
+    },
     listAttachments: async (userId) => attachments.filter((entry) => entry.userId === userId),
     putAttachment: async (attachment) => {
       attachments = [

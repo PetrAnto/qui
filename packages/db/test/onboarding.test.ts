@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { completeOnboarding, setProfileFacets, type Ports } from '@indenoi/core';
-import { CITY_IDS } from '@indenoi/geo';
+import { CITY_IDS, searchCities } from '@indenoi/geo';
 
 import { DEMO_USERS, createDemoPorts } from '../src/demo/index';
 
@@ -75,6 +75,21 @@ describe('onboarding', () => {
     const person = await ports.repo.getPerson(DEMO_USERS.tom);
     expect(person?.practices).toEqual(['climbing', 'sea swimming']);
     expect(person?.interests).toEqual(['bouldering']);
+  });
+
+  it('activates a worldwide city that is not in the seed', async () => {
+    const tokyo = searchCities('tokyo').find((scope) => scope.countryCode === 'JP');
+    expect(tokyo).toBeDefined();
+    const result = await completeOnboarding(ports, {
+      actorId: DEMO_USERS.tom,
+      declaredAge: 29,
+      geoScopeId: tokyo?.id ?? '',
+      kind: 'exploring',
+    });
+    expect(result.ok).toBe(true);
+    const stored = await ports.repo.getGeoScope(tokyo?.id ?? '');
+    expect(stored?.name).toBe(tokyo?.name);
+    expect(stored?.countryCode).toBe('JP');
   });
 });
 

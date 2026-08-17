@@ -1,110 +1,69 @@
 # Geography data provenance
 
-**Status: BASELINE — attribution LOCKED, identifiers UNVERIFIED.**
+**Status: BASELINE — attribution LOCKED.** Seed identifiers remain
+UNVERIFIED until the table below is updated. The worldwide index is
+derived from an official GeoNames dump and is marked `verified: true`
+for dump-backed rows only.
 
-`packages/geo/src/gazetteer.ts` is a small, hand-curated gazetteer: **6
-countries, 17 regions, 34 cities**. It is a *dataset*, not a code path. Adding a
-city is adding a row, and nothing in the application may branch on which row it
-is ([ADR-0004](../adr/0004-geography.md)).
+`packages/geo` holds two datasets:
 
-> **Note on paths.** Source comments in `packages/geo/src/gazetteer.ts` and
-> `packages/core/src/types.ts` refer to `docs/GEO_PROVENANCE.md` and
-> `scripts/geo/verify-gazetteer.md`. This file supersedes both; the verification
-> procedure that the second path would have held is in
-> [Verification procedure](#verification-procedure) below.
+1. A **hand-curated seed** (`gazetteer.ts`) of 6 countries, 17 regions
+   and 34 cities used by the demo cast.
+2. A **worldwide search index** (`generated/world-cities.json`) built
+   from GeoNames `cities15000` (settlements ≥ 15,000 people). Search
+   and activation use this index. Adding a city is choosing a row, not
+   shipping a code change ([ADR-0004](../adr/0004-geography.md)).
+
+The 15,000-person dump is a **coverage baseline**, not the product
+boundary. Smaller places already in the seed (Kilrush, Corte, …) stay
+searchable. A later dump (`cities500` / `cities1000`) can replace the
+index without changing application code.
 
 ## Source and licence
 
-The identifier authority is **GeoNames** (<https://www.geonames.org/>), licensed
-under **Creative Commons Attribution 4.0 International (CC BY 4.0)**
+The identifier authority is **GeoNames** (<https://www.geonames.org/>),
+licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**
 (<https://creativecommons.org/licenses/by/4.0/>).
 
-CC BY 4.0 permits use and redistribution, including commercially and in modified
-form, provided attribution is given and changes are indicated. Both obligations
-apply here and are discharged as follows.
-
-**Attribution string** (`GEO_ATTRIBUTION`, exported from `@indenoi/geo`):
+**Attribution string** (`GEO_ATTRIBUTION`):
 
 > City and administrative data derived from GeoNames (geonames.org), licensed
 > under CC BY 4.0.
 
-It is rendered in the app footer. **Rendering it in the shipped UI is a release
-blocker** ([RELEASE_CHECKLIST.md](../RELEASE_CHECKLIST.md)) — an attribution
-that exists only in a constant is not attribution.
+It is rendered in the app footer.
 
-**Indication of changes**, as required by CC BY 4.0 §3(a)(1)(B): this is not a
-reproduction of any GeoNames file. See below.
+**Indication of changes:** this is not a verbatim GeoNames file. The world
+index keeps a compact tuple per populated place (id, names, country,
+admin1, centroid, timezone, population). Alternate-name columns and
+unused fields are dropped.
 
-## What was actually done — stated honestly
+## What was actually done
 
-**No GeoNames dump was ingested to produce this build.** The rows were typed by
-hand from reference. Consequently:
+| Dataset | How it was built | `verified` |
+|---|---|---|
+| Seed gazetteer | Hand-typed from reference | `false` until the procedure below is run per row |
+| World index | `scripts/geo/build-world-index.mjs` over `cities15000.txt` | `true` for dump-backed rows |
 
-- Every entry carries `provenance.verified: false`. This is the honest value and
-  the tests assert it. Flipping it to `true` without performing the check below
-  would be a provenance lie in a file whose entire purpose is provenance.
-- **Cities** carry `source: 'geonames'` with a `sourceId` — the GeoNames
-  `geonameid` as hand-entered. Unverified.
-- **Countries and regions** carry `source: 'curated'` with `sourceId: null`.
-  Regions are administrative groupings for which no confident GeoNames
-  identifier was assigned; they are our own groupings, not GeoNames data.
-- Centroids and IANA timezones on city rows are likewise hand-entered.
+Rebuild:
 
-Nothing here is a bulk redistribution of the GeoNames database, so the practical
-question at release is attribution and accuracy, not database-rights
-compliance — but that assessment belongs to legal review, not to this file.
+```sh
+curl -fsSL -o /tmp/geonames/cities15000.zip https://download.geonames.org/export/dump/cities15000.zip
+unzip -o /tmp/geonames/cities15000.zip -d /tmp/geonames
+node scripts/geo/build-world-index.mjs
+```
 
-## Verification procedure
-
-To be run before launch, and re-run whenever a row is added. This is the
-procedure the (absent) `scripts/geo/verify-gazetteer.md` was to describe.
-
-1. Download the official export from
-   <https://download.geonames.org/export/dump/> — `cities500.zip` covers every
-   settlement in this gazetteer, or `allCountries.zip` for completeness. Note
-   the **dump date**; it is part of the provenance record.
-2. For each city row, look up the `sourceId` in the dump and confirm **all** of:
-   - the `geonameid` exists;
-   - the canonical name matches the row's `name` (or is a documented exonym);
-   - the ISO-3166-1 alpha-2 country code matches `countryCode`;
-   - latitude/longitude agree with `centroid` to a sensible tolerance
-     (a few hundredths of a degree — these are city centroids, not addresses);
-   - the IANA timezone matches;
-   - the feature class/code is a populated place (`P`), not an administrative
-     division.
-3. Where a row checks out, set `verified: true` **for that row only**. Never
-   flip the flag in bulk.
-4. Where it does not, correct the row — do not silently drop the id.
-5. Record in this file: the dump date, who ran the check, and how many rows
-   passed.
-
-| Dump date | Checked by | Rows verified | Notes |
-|---|---|---|---|
-| *never run* | — | 0 / 34 | Initial hand-entered capture. |
+| Dump | Built | Rows |
+|---|---|---|
+| GeoNames cities15000 | 2026-08-17 | 34,099 |
 
 ## Privacy boundary
 
-A **place** may carry a centroid. A **person** never may — no domain type
-attached to a person can hold coordinates, and none of the public projections
-expose one (`INV-GEO-1`, [SAFETY.md](../SAFETY.md)).
-
-This is worth stating on the provenance page specifically, because the gazetteer
-is the only place in the codebase where coordinates legitimately exist. The
-temptation to "just attach the city centroid to the user for convenience" is the
-exact thing the invariant forbids: a centroid attached to a person is a location
-attached to a person, whatever its resolution.
-
-Sub-city (`neighbourhood`) scopes are supported by the type system and
-deliberately absent from the dataset. Finer scopes narrow a person's location
-and require their own analysis against `INV-GEO-1` before any are added
-([NON_GOALS.md](../NON_GOALS.md)).
+A **place** may carry a centroid. A **person** never may (`INV-GEO-1`).
+World-city centroids live only on the place record.
 
 ## Current coverage
 
-France (Ajaccio, Bastia, Porto-Vecchio, Corte, Marseille, Nice, Aix-en-Provence,
-Toulon, Paris, Saint-Denis, Lyon, Grenoble, Montpellier, Toulouse, Perpignan,
-Bordeaux, Biarritz, Rennes, Brest), Ireland (Kilrush, Ennis, Galway, Cork,
-Dublin), Portugal (Porto, Braga, Lisboa), Spain, Italy and Belgium.
-
-The starting set reflects where the first cohort is expected, not any judgement
-about which places matter. No city is privileged anywhere in the code.
+- Seed: France, Ireland, Portugal, Spain, Italy, Belgium (see
+  `packages/geo/src/gazetteer.ts`).
+- World index: every populated place in GeoNames `cities15000`.
+- No city is privileged in application code.

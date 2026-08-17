@@ -1,33 +1,26 @@
 # Autonomous continuation state
 
-**Not a product document.** Recovery checkpoint for autonomous sessions only.
+**Not a product document.**
 
 ## Timestamp
 
-- Recovered: `2026-08-17T15:39:00Z`
-- PR A in progress on `feat/qui-canon-reconciliation`
+- 2026-08-17T16:35:00Z
 
 ## Repository
 
 - Path: `/home/petranto/projects/indenoi`
-- GitHub: `https://github.com/PetrAnto/indenoi` (private)
-- **origin/main at recovery:** `f5a0b2b9fb5fb9ad88b4778898996910cfe55182` (PR #24)
-- Active branch: `feat/qui-canon-reconciliation`
+- **origin/main after PR #27:** `f3f837d4806ea20afa13c738c1852e838c8dfe16`
+- Active branch: `feat/worldwide-city-activation`
 
-## This tranche
+## Completed this tranche
 
-1. PR A (now): QUI canon, brand, status vocabulary, ADRs 0013–0015
-2. PR B: OSS licence + secret audit + rename/public if clean
-3. PR C: arbitrary worldwide city activation
-4. PR D: public synthetic demo if CF auth available
+- PR A / #27 merged: QUI canon (ADR-0013/14/15)
+- Worldwide city index generated from GeoNames cities15000 (34,099 rows)
+- Search + activation of non-seed cities (Tokyo etc.)
+- Onboarding city picker is now search, not a 34-row dropdown
 
-## AGENTS.md
+## Remaining
 
-Host-protected: write was blocked without user consent. Deploy-policy override
-lives in ADR-0015 + RELEASE_CHECKLIST + this file. Do not retry writing AGENTS.md
-via a workaround.
-
-## Exact next action
-
-Finish PR A (tests + PR), then PR C geography (highest product gap), then OSS
-audit, then demo deploy.
+- Land city PR
+- OSS audit + public/rename
+- Public synthetic demo if CF auth exists

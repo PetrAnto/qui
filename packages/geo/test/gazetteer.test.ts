@@ -38,12 +38,13 @@ describe('gazetteer shape', () => {
     }
   });
 
-  it('carries provenance for every entry, and is honest about unverified ids', () => {
+  it('carries provenance for every entry, and is honest about unverified seed ids', () => {
     for (const scope of GAZETTEER) {
       expect(['geonames', 'curated']).toContain(scope.provenance.source);
       expect(typeof scope.provenance.verified).toBe('boolean');
       if (scope.provenance.source === 'geonames') {
         expect(scope.provenance.sourceId).toMatch(/^\d+$/);
+        expect(scope.provenance.verified).toBe(false);
       }
     }
   });
@@ -99,5 +100,23 @@ describe('city search', () => {
         'porto',
       ]),
     );
+  });
+});
+
+describe('worldwide city index', () => {
+  it('finds a city that is not in the hand-curated seed', () => {
+    const hits = searchCities('tokyo');
+    expect(hits.some((scope) => /tokyo/i.test(scope.name) && scope.countryCode === 'JP')).toBe(true);
+    expect(hits[0]?.id.startsWith('geo:city:')).toBe(true);
+  });
+
+  it('resolves a world city by id without a code change', () => {
+    const tokyo = searchCities('tokyo').find((scope) => scope.countryCode === 'JP');
+    expect(tokyo).toBeDefined();
+    expect(getScope(tokyo?.id ?? '')?.name).toBe(tokyo?.name);
+  });
+
+  it('keeps seed cities first when names collide', () => {
+    expect(searchCities('porto')[0]?.id).toBe(CITY_IDS.porto);
   });
 });
