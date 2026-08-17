@@ -187,6 +187,10 @@ p {
   gap: 0.3rem;
 }
 
+.welcome .pagehead h2 {
+  font-size: 1.45rem;
+}
+
 .pagehead__sub {
   color: var(--muted);
   font-size: 0.86rem;

@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import * as path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -71,5 +71,27 @@ describe('landing hero photography', () => {
       expect(statSync(file).size).toBeGreaterThan(8_000);
       expect(statSync(file).size).toBeLessThan(400_000);
     }
+  });
+
+  it('is imported only from the welcome route', () => {
+    const root = path.join(process.cwd(), 'apps/web');
+    const webRoot = existsSync(root) ? root : process.cwd();
+    const sources: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name === '.next') continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(tsx|ts)$/.test(entry.name)) sources.push(full);
+      }
+    };
+    walk(webRoot);
+    const importers = sources.filter((file) => {
+      if (file.endsWith(`${path.sep}LandingHero.tsx`)) return false;
+      return /from ['"][^'"]*LandingHero['"]/.test(readFileSync(file, 'utf8'));
+    });
+    expect(importers.map((file) => path.relative(webRoot, file))).toEqual([
+      path.join('app', 'welcome', 'page.tsx'),
+    ]);
   });
 });

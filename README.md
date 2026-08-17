@@ -29,8 +29,10 @@ Concretely:
   and must never be bound to an identity.
 - **State lives in the server isolate and resets.** There is no database
   connection in this build.
-- **There are no uploads.** Avatars and imagery are generated deterministically
-  from the handle.
+- **There are no uploads.** In-app avatars and feed imagery are generated
+  deterministically from the handle. The welcome page is the exception: it
+  uses licensed editorial photographs, documented in
+  [docs/assets/LANDING_HERO_PHOTOGRAPHY.md](docs/assets/LANDING_HERO_PHOTOGRAPHY.md).
 
 ## Quick start
 
@@ -44,7 +46,7 @@ Verification, in the order CI runs it:
 ```sh
 pnpm lint
 pnpm typecheck
-pnpm test         # 159 tests
+pnpm test         # 166 tests
 pnpm test:safety  # the INV-* safety invariants, as a named gate
 pnpm e2e          # mobile smoke suite (needs a Chromium)
 ```
