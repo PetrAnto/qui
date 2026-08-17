@@ -7,6 +7,7 @@ import { TABS, isActiveTab } from '../lib/nav';
 
 export function TabBar() {
   const pathname = usePathname();
+  if (pathname === '/welcome') return null;
   return (
     <nav className="tabbar" aria-label="Main">
       {TABS.map((tab) => (

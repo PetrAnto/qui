@@ -610,6 +610,240 @@ main:focus {
   white-space: nowrap;
 }
 
+.app:has(.welcome) {
+  max-width: 72rem;
+}
+
+.app:has(.welcome) .app__main {
+  padding-bottom: 2.5rem;
+}
+
+.site-footer {
+  padding: 0 1.05rem 6rem;
+}
+
+.app:has(.welcome) .site-footer {
+  padding-bottom: 2rem;
+}
+
+.landing {
+  display: grid;
+  gap: 1.25rem;
+  --coral: hsl(12 72% 58%);
+  --ivory: hsl(38 36% 94%);
+}
+
+.landing__wordmark {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--coral);
+}
+
+.landing h1 {
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.landing__lede {
+  color: var(--muted);
+  font-size: 1.02rem;
+  max-width: 34rem;
+}
+
+.landing__disclaimer {
+  color: var(--faint);
+  font-size: 0.78rem;
+  max-width: 36rem;
+}
+
+.landing__stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 0.55rem;
+  min-height: 18rem;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.landing__stage::before {
+  content: '';
+  position: absolute;
+  inset: 8% 18% auto 8%;
+  height: 42%;
+  border: 1px solid hsl(12 72% 58% / 0.22);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing__frame {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.landing__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing__frame--photographer-street {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  min-height: 16rem;
+  aspect-ratio: 3 / 4;
+}
+
+.landing__frame--guitarist-field {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 8.5rem;
+  aspect-ratio: 4 / 5;
+}
+
+.landing__frame--guitarist-field img {
+  object-position: 50% 18%;
+}
+
+.landing__frame--photographer-mature {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 7rem;
+  aspect-ratio: 5 / 4;
+}
+
+.landing__frame--street-accordion {
+  grid-column: 1;
+  grid-row: 3;
+  min-height: 6.5rem;
+  aspect-ratio: 5 / 4;
+}
+
+.landing__frame--craft-tongs {
+  grid-column: 2;
+  grid-row: 3;
+  opacity: 0.72;
+  filter: saturate(0.7);
+  min-height: 6.5rem;
+  aspect-ratio: 5 / 4;
+}
+
+.landing__frame--history-fisherman {
+  position: absolute;
+  inset: auto auto -6% -8%;
+  width: 42%;
+  aspect-ratio: 3 / 4;
+  opacity: 0.16;
+  filter: grayscale(1) contrast(1.15);
+  z-index: 0;
+  pointer-events: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.landing__credits {
+  margin: 0;
+}
+
+.landing__credits a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+@media (min-width: 860px) {
+  .welcome {
+    display: grid;
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+    gap: 1.25rem 2rem;
+    align-items: start;
+  }
+
+  .landing {
+    display: contents;
+  }
+
+  .landing__copy {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .landing__stage {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    min-height: 32rem;
+    position: sticky;
+    top: 3.5rem;
+  }
+
+  .landing__credits {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .welcome > .stack {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .landing h1 {
+    font-size: 2.55rem;
+  }
+
+  .landing__frame--photographer-street {
+    min-height: 22rem;
+  }
+
+  .landing__frame--history-fisherman {
+    inset: 0 auto auto 0;
+    width: 36%;
+    opacity: 0.11;
+  }
+}
+
+@media (max-width: 520px) {
+  .landing__stage {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .landing__frame--photographer-street {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    aspect-ratio: 4 / 5;
+    min-height: 14rem;
+  }
+
+  .landing__frame--guitarist-field {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .landing__frame--photographer-mature {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .landing__frame--street-accordion,
+  .landing__frame--craft-tongs {
+    display: none;
+  }
+
+  .landing__frame--history-fisherman {
+    width: 56%;
+    opacity: 0.12;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

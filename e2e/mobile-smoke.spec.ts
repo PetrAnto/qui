@@ -33,7 +33,16 @@ test.describe.configure({ mode: 'serial' });
 test('the demo says what it is, on every screen', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/welcome$/);
-  await expect(page.getByText('Demo build — every person and post here is invented')).toBeVisible();
+  await expect(page.getByText('Demo build — every account and post here is invented')).toBeVisible();
+});
+
+test('welcome shows an editorial people hero without inventing members', async ({ page }) => {
+  await page.goto('/welcome');
+  await expect(page.getByRole('heading', { name: 'The people around you' })).toBeVisible();
+  await expect(page.getByText(/not members, not endorsements/i)).toBeVisible();
+  await expect(page.getByRole('img', { name: /photographing in a city square/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'How old are you?' })).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('looking to meet');
 });
 
 test('refuses an account below the age baseline, and says so', async ({ page }) => {

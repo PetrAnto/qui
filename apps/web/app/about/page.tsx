@@ -40,8 +40,13 @@ export default function AboutPage() {
             and none corresponds to a living person.
           </li>
           <li>
-            The photographs. There are none — each image is a gradient generated from a seed, and it
-            says &ldquo;generated&rdquo; on every one.
+            Product photographs. Inside the app there are none — each feed image is a gradient
+            generated from a seed, and it says &ldquo;generated&rdquo; on every one of them.
+          </li>
+          <li>
+            The welcome-hero photographs. Those are licensed editorial stills of real people doing
+            real things. They are not accounts, not locals, and not endorsements. Provenance lives
+            in the repository under docs/assets/.
           </li>
           <li>
             Sign-in. {FEATURES.productionAuth ? 'Enabled.' : 'Not implemented; you are handed a demo persona.'}
