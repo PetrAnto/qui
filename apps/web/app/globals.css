@@ -343,9 +343,40 @@ p {
 .textarea:focus-visible,
 .select:focus-visible,
 .btn:focus-visible,
+.result:focus-visible,
+.tabbar__item:focus-visible,
+summary:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Keyboard users jump past the sticky demo banner and tab chrome. */
+.skip-link {
+  position: absolute;
+  left: var(--page);
+  top: 0.5rem;
+  z-index: 100;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 0.88rem;
+  transform: translateY(-160%);
+  transition: transform 120ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* Main is focusable only as a skip-link target; keep the ring off by default. */
+main:focus {
+  outline: none;
 }
 
 .notice {

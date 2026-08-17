@@ -167,3 +167,28 @@ test('a minor does not appear in people discovery for an adult', async ({ page }
   await expect(page.getByRole('heading', { name: /People in/ })).toBeVisible();
   await expect(page.getByText('@demo-ines')).toHaveCount(0);
 });
+
+test('keyboard users can skip to main and reach primary controls', async ({ page }) => {
+  await page.goto('/welcome');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main')).toBeFocused();
+
+  await onboard(page, '31');
+  await page.goto('/');
+  // Tab bar is a landmark with named links — keyboard, not only tap.
+  const discover = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Discover/i });
+  await discover.focus();
+  await expect(discover).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('reduced-motion preference is honoured in CSS', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/welcome');
+  const transition = await page.locator('.skip-link').evaluate((el) => getComputedStyle(el).transitionDuration);
+  // prefers-reduced-motion zeroes transitions; browsers report "0s".
+  expect(transition === '0s' || transition === '0ms').toBe(true);
+});
