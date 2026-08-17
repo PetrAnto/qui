@@ -2,7 +2,7 @@
   "name": "indenoi",
   "private": true,
   "version": "0.1.0",
-  "description": "indenoi — internal codename for a multi-city, local-first human social MVP. Not a public brand.",
+  "description": "QUI — a local-first human social product. Internal workspace still named indenoi.",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22.12.0"

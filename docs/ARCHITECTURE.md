@@ -105,7 +105,10 @@ the `persistentDatabase` flag ([ADR-0011](adr/0011-persistence-boundary.md)).
 | [0006](adr/0006-kyc-boundary.md) | KYC boundary | LOCKED |
 | [0007](adr/0007-media.md) | Media | DEFERRED (boundary LOCKED) |
 | [0008](adr/0008-ranking-and-discover.md) | Ranking and Discover | BASELINE |
-| [0009](adr/0009-signal-intent-scope.md) | Signal intent scope | LOCKED (romance OUT OF SCOPE) |
+| [0009](adr/0009-signal-intent-scope.md) | Signal intent scope (MVP four intents) | LOCKED (romance claim superseded by 0013) |
+| [0013](adr/0013-romance-deferred-not-forbidden.md) | Adult romance deferred, not banned | LOCKED |
+| [0014](adr/0014-public-brand-qui.md) | Public brand QUI / qui.social | LOCKED |
+| [0015](adr/0015-public-synthetic-demo.md) | Synthetic demo deploy vs production | LOCKED |
 | [0010](adr/0010-moderation-hosts-and-blocks.md) | Moderation, hosts, blocks | LOCKED |
 | [0011](adr/0011-persistence-boundary.md) | Persistence boundary | DEFERRED (interface LOCKED) |
 | [0012](adr/0012-messaging-scope.md) | Messaging scope | LOCKED |

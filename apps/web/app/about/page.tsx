@@ -67,12 +67,15 @@ export default function AboutPage() {
       </section>
 
       <section className="card card--pad stack stack--tight">
-        <h2>What it will never do</h2>
+        <h2>What this demo will not do</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: '1.1rem' }}>
-          <li>Ask for your location. There is no coordinate attached to a person anywhere.</li>
+          <li>Ask for your precise location. There is no coordinate attached to a person anywhere.</li>
           <li>Let a stranger message you out of nowhere. Contact starts from something you posted.</li>
           <li>Give you a trust score. Evidence is separate facts, never a ladder.</li>
-          <li>Carry a romantic surface. That is not deferred; it is out of scope.</li>
+          <li>
+            Offer a dating catalogue. Adult romantic discovery is a later, private, opt-in idea —
+            not this demo, and never for minors.
+          </li>
         </ul>
       </section>
 

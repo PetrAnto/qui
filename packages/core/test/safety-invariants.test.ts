@@ -481,7 +481,7 @@ describe('INV-PROFILE-1 private trust state stays private', () => {
   });
 });
 
-describe('INV-ROMANCE-1 the product has no romantic surface', () => {
+describe('INV-ROMANCE-1 current MVP has no romantic surface', () => {
   it('has no romantic intent in the signal vocabulary', () => {
     expect([...SIGNAL_TYPES]).toEqual(['ask', 'offer', 'join', 'event']);
     for (const type of SIGNAL_TYPES) {

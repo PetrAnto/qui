@@ -20,8 +20,8 @@ export function LandingHero() {
         <p className="landing__wordmark">QUI</p>
         <h1 id="landing-title">The people around you</h1>
         <p className="landing__lede">
-          Not another global feed. A local-first way to see who is actually here — and turn some of
-          that attention into real life.
+          Not another infinite global feed. A local social world — people,
+          practices and chances close enough to matter in real life.
         </p>
         <p className="landing__disclaimer">{LANDING_DISCLAIMER}</p>
       </div>

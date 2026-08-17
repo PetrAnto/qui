@@ -45,8 +45,10 @@ what people are trying to say — that is the argument for extending
 `SIGNAL_TYPES` (Learn / Teach / Project), which is a type change and an ADR, not
 a config toggle.
 
-**Never a valid outcome:** adding a romantic intent
-([ADR-0009](adr/0009-signal-intent-scope.md), OUT OF SCOPE).
+**Not a valid outcome of this experiment:** quietly adding a romantic intent
+to the four-word vocabulary. Adult Mutual Signals are a separate, deferred
+product track ([ADR-0013](adr/0013-romance-deferred-not-forbidden.md)), not a
+fix for misfiled Asks.
 
 ## E2 — Is signal-gated contact enough, or does it strangle the loop?
 

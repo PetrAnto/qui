@@ -1,11 +1,11 @@
 # Release checklist
 
-**Status: BLOCKING.** Nothing in this repository has been deployed, and this
-list is what must be true before it is. Items marked **BLOCKER** cannot be
-waived by an engineer; they need a named owner's decision.
+**Status: BLOCKING for real-user production.** A public *synthetic* demo is a
+different gate — see [ADR-0015](adr/0015-public-synthetic-demo.md).
 
-Current state: **local demo only.** No Cloudflare account is configured, no
-database exists, no domain is registered, no user has ever seen this.
+Current state: **synthetic demo only.** No real-user production exists. The
+e2e suite has completed locally and in CI; ignore older notes that said
+otherwise.
 
 ## 0. Every time — the gate that runs on every change
 
@@ -17,8 +17,7 @@ pnpm test:safety
 ```
 
 All four green, plus a completed `pnpm e2e` run (see
-[TEST_EVIDENCE.md](TEST_EVIDENCE.md) — the e2e suite has never completed in the
-development environment for lack of a Chromium).
+[TEST_EVIDENCE.md](TEST_EVIDENCE.md)).
 
 ## 1. Product and legal — BLOCKERS
 
@@ -110,5 +109,6 @@ so `wrangler deploy` cannot succeed against the wrong target by accident. Do not
 
 ## Explicitly not on this list
 
-Growth targets, app-store presence, and any advertising integration. See
-[NON_GOALS.md](NON_GOALS.md).
+Growth targets and app-store presence. Advertising is **OPEN / not part of
+MVP** ([NON_GOALS.md](NON_GOALS.md)) — do not treat its absence as a
+permanent architectural ban.
