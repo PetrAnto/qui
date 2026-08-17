@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main id="main" className="app__main" tabIndex={-1}>
             {children}
           </main>
-          <footer className="faint" style={{ padding: '0 1.05rem 6rem' }}>
+          <footer className="faint site-footer">
             {GEO_ATTRIBUTION}
           </footer>
           <TabBar />

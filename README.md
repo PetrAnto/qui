@@ -22,7 +22,11 @@ Concretely:
 
 - **Sign-in is a persona switcher** over a cast of 14 fictional people.
 - **All content, cities and relationships are seeded synthetic data.** No
-  real person appears anywhere in this repository.
+  real person is a user, a persona, or a testimonial in this repository.
+  The welcome page may show licensed editorial photographs of real people
+  *as illustrations only*; they are documented in
+  [docs/assets/LANDING_HERO_PHOTOGRAPHY.md](docs/assets/LANDING_HERO_PHOTOGRAPHY.md)
+  and must never be bound to an identity.
 - **State lives in the server isolate and resets.** There is no database
   connection in this build.
 - **There are no uploads.** Avatars and imagery are generated deterministically
@@ -88,6 +92,7 @@ and why it is a baseline rather than a locked decision.
 | [docs/RELEASE_REVIEW.md](docs/RELEASE_REVIEW.md) | Adversarial review of the landed demo SHA; deploy decision. |
 | [docs/legal/AGE_BASELINE.md](docs/legal/AGE_BASELINE.md) | The 15+ baseline and its sources. |
 | [docs/geo/PROVENANCE.md](docs/geo/PROVENANCE.md) | Where the geography data comes from, and its licence. |
+| [docs/assets/LANDING_HERO_PHOTOGRAPHY.md](docs/assets/LANDING_HERO_PHOTOGRAPHY.md) | Welcome-hero photographs: licence, attribution, residual risk. |
 | [docs/threat-model/MINORS_AND_LOCAL_CONFLICT.md](docs/threat-model/MINORS_AND_LOCAL_CONFLICT.md) | The two threat models the design actually targets. |
 | [docs/adr/](docs/adr/) | The decisions, each with an explicit status. |
 
