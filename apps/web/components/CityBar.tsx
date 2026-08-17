@@ -79,7 +79,7 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
               type="search"
               autoFocus
               value={query}
-              placeholder="Kilrush, Porto, Bastia…"
+              placeholder="Any city on earth"
               onChange={(event) => void search(event.target.value)}
             />
           </label>
@@ -98,10 +98,7 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
               </button>
             ))}
             {query.trim().length > 0 && results.length === 0 ? (
-              <p className="faint">
-                Nothing by that name yet. The gazetteer is a dataset, not a code path — adding a city
-                is adding a row.
-              </p>
+              <p className="faint">Nothing by that name. Try another spelling.</p>
             ) : null}
           </div>
         </div>

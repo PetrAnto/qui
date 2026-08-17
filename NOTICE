@@ -1,0 +1,22 @@
+# NOTICE
+
+QUI
+Copyright 2026 QUI contributors
+
+This product includes software developed for QUI (qui.social).
+The public product name is QUI. The GitHub tree may still use the
+internal workspace name `indenoi`.
+
+## Third-party data
+
+City and administrative data derived from GeoNames (geonames.org),
+licensed under Creative Commons Attribution 4.0 International
+(https://creativecommons.org/licenses/by/4.0/).
+See docs/geo/PROVENANCE.md.
+
+## Third-party photographs
+
+Editorial landing-hero photographs are licensed separately from the
+product source (typically CC BY). They are illustrations, not members,
+and are not relicensed as Apache-2.0 product code.
+See docs/assets/LANDING_HERO_PHOTOGRAPHY.md for per-asset attribution.

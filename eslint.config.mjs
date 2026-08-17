@@ -15,6 +15,7 @@ export default tseslint.config(
       '**/test-results/**',
       '.pnpm-store/**',
       'packages/db/migrations/**',
+      'scripts/geo/**',
     ],
   },
   js.configs.recommended,

@@ -200,6 +200,12 @@ describe('city surface', () => {
     expect(body.cities[0]?.name).toBe('Porto');
   });
 
+  it('searches a city that is not in the hand-curated seed', async () => {
+    const response = await searchCities(request('/api/cities?q=tokyo'));
+    const body = (await response.json()) as { cities: { id: string; name: string; countryCode: string }[] };
+    expect(body.cities.some((city) => /tokyo/i.test(city.name) && city.countryCode === 'JP')).toBe(true);
+  });
+
   it('adds a city with no evidence required', async () => {
     const response = await addCity(
       request('/api/cities', {

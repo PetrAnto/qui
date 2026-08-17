@@ -129,7 +129,7 @@ export function PlacesManager({ places }: { places: readonly PlaceRow[] }) {
             className="input"
             type="search"
             value={query}
-            placeholder="Any city — Kilrush, Porto, Girona…"
+            placeholder="Any city on earth"
             onChange={(event) => void search(event.target.value)}
           />
         </label>

@@ -21,6 +21,7 @@
     "verify:opennext": "bash scripts/verify-opennext.sh",
     "db:generate": "pnpm --filter @indenoi/db db:generate",
     "db:check": "pnpm --filter @indenoi/db db:check",
+    "geo:build": "node scripts/geo/build-world-index.mjs",
     "verify": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

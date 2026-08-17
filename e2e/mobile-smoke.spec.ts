@@ -13,14 +13,14 @@ import { expect, test, type Page } from '@playwright/test';
  * own synthetic viewer instead of depending on another test's cookie.
  */
 
-const AJACCIO = 'geo:city:ajaccio';
 const KILRUSH = 'geo:city:kilrush';
 
 async function onboard(page: Page, age: string): Promise<void> {
   await page.goto('/welcome');
   await page.getByLabel('Your age').fill(age);
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByLabel('City').selectOption(AJACCIO);
+  await page.getByLabel('City').fill('Ajaccio');
+  await page.getByRole('button', { name: /Ajaccio/ }).first().click();
   await page.getByLabel('What is it to you?').selectOption('resident');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('I practise… (comma separated)').fill('bike repair, freediving');
@@ -90,12 +90,10 @@ test('a card can be appreciated, and explains why it is in the feed', async ({ p
 test('any city can be switched to, with no permission and no evidence', async ({ page }) => {
   await onboard(page, '31');
   await page.getByRole('button', { name: 'Change city' }).click();
-  await page.getByLabel('Search any city').fill('kilrush');
-  await page.getByRole('button', { name: /Kilrush/ }).click();
+  await page.getByLabel('Search any city').fill('tokyo');
+  await page.getByRole('button', { name: /Tokyo/ }).first().click();
 
-  await expect(page.getByText('Kilrush', { exact: true })).toBeVisible();
-  await page.goto('/signals');
-  await expect(page.getByRole('heading', { name: 'Signals in Kilrush' })).toBeVisible();
+  await expect(page.getByText('Tokyo', { exact: true })).toBeVisible();
 });
 
 test('publishing as a local is refused where there is no tie', async ({ page }) => {

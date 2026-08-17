@@ -1,21 +1,13 @@
 import type { GeoScope } from '@indenoi/core';
 
 /**
- * A small, hand-curated gazetteer.
+ * A small, hand-curated seed used by the demo cast.
  *
- * Provenance and licensing (see docs/GEO_PROVENANCE.md):
- *  - The identifier authority is GeoNames (https://www.geonames.org/), licensed
- *    CC BY 4.0. Attribution is rendered in the app footer.
- *  - No GeoNames file was ingested to produce this build; the entries below were
- *    typed by hand. Every id therefore carries `verified: false` until it has
- *    been checked against the official export by
- *    `scripts/geo/verify-gazetteer.md`. Claiming otherwise would be a
- *    provenance lie, and the tests assert the honest value.
- *  - Regions are administrative groupings; those without a confident GeoNames id
- *    are marked `source: 'curated'`.
+ * Worldwide search lives in `generated/world-cities.json` (GeoNames
+ * cities15000). This file is not the product boundary.
  *
- * This is deliberately a *dataset*, not a code path. Adding a city is adding a
- * row. Nothing in the application may branch on which row it is.
+ * Provenance: docs/geo/PROVENANCE.md. Identifier authority is GeoNames
+ * (CC BY 4.0). Seed rows stay `verified: false` until checked one by one.
  */
 export const GEO_ATTRIBUTION =
   'City and administrative data derived from GeoNames (geonames.org), licensed under CC BY 4.0.';
