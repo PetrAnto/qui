@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "indenoi-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-01",
+  // OpenNext needs the Node.js compatibility layer, and `nodejs_compat_populate_process_env`
+  // is what makes the INDENOI_FEATURE_* flags readable through `process.env`.
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // No deployment has been performed and no account is configured here on
+  // purpose: provisioning is a decision for a human with an account, not
+  // something a build should do. See RELEASE_CHECKLIST.md.
+  //
+  // Persistence (ADR-0011) arrives as a D1 binding. It is commented out rather
+  // than pointed at a placeholder id, so that `wrangler deploy` cannot succeed
+  // against the wrong database:
+  //
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "indenoi", "database_id": "<set-by-a-human>" }
+  // ],
+  //
+  // Feature flags default to off. Turning one on is a deliberate act (INV-DEMO-1).
+  "vars": {
+    "INDENOI_FEATURE_PRODUCTION_AUTH": "false",
+    "INDENOI_FEATURE_LIVE_IDENTITY": "false",
+    "INDENOI_FEATURE_MEDIA_UPLOADS": "false",
+    "INDENOI_FEATURE_D1": "false"
+  }
+}
