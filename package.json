@@ -1,0 +1,34 @@
+{
+  "name": "indenoi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "indenoi — internal codename for a multi-city, local-first human social MVP. Not a public brand.",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:safety": "vitest run --project core -t 'INV-'",
+    "e2e": "playwright test",
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "build:opennext": "pnpm --filter web build:opennext",
+    "preview": "pnpm --filter web preview",
+    "db:generate": "pnpm --filter @indenoi/db db:generate",
+    "db:check": "pnpm --filter @indenoi/db db:check",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.0.0",
+    "typescript": "~5.9.0",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@indenoi/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./demo": "./src/demo/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check"
+  },
+  "dependencies": {
+    "@indenoi/core": "workspace:*",
+    "@indenoi/geo": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5",
+    "drizzle-kit": "^0.31.0"
+  }
+}

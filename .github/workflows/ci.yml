@@ -1,0 +1,121 @@
+name: CI
+
+# There is deliberately no deploy job. Provisioning and deployment are decisions
+# for a human with a Cloudflare account, not something a pipeline does on merge.
+# See docs/RELEASE_CHECKLIST.md.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # pnpm-workspace.yaml pins the store inside the repo, which also makes the
+  # cache key trivial.
+  STORE_PATH: .pnpm-store
+
+jobs:
+  verify:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+  safety:
+    name: Safety invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Runs as its own job, on the same tests, so that a failure reads as a
+    # safety regression rather than as one red line inside a long suite.
+    # The INV-* invariants are LOCKED: see docs/SAFETY.md.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test:safety
+
+  e2e:
+    name: Mobile smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      # The suite runs against the production build, not `next dev`, so what is
+      # exercised is what would actually ship. Feature flags stay unset, which
+      # means every production capability is off (INV-DEMO-1).
+      - run: pnpm build
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

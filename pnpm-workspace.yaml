@@ -1,0 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Repo-local content-addressable store. Development runs inside a sandbox that
+# only grants write access to the project directory, so a store outside it fails
+# at install time. It also makes the CI cache key trivial.
+storeDir: .pnpm-store
+
+# pnpm 10 blocks lifecycle scripts by default. Only the toolchain binaries that
+# genuinely need a postinstall step are allowed through.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd

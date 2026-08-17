@@ -1,0 +1,187 @@
+
+> indenoi@0.1.0 test /home/petranto/projects/indenoi
+> vitest run
+
+
+ RUN  v3.2.7 /home/petranto/projects/indenoi
+
+ ❯ |db| test/onboarding.test.ts (7 tests | 7 failed) 44ms
+   × onboarding > refuses an age below the baseline and writes nothing at all 15ms
+     → (0 , completeOnboarding) is not a function
+   × onboarding > keeps only the band, never the declared age 5ms
+     → (0 , completeOnboarding) is not a function
+   × onboarding > refuses a declared age that contradicts the account age band 5ms
+     → (0 , completeOnboarding) is not a function
+   × onboarding > attaches the chosen city and records what the person does 3ms
+     → (0 , completeOnboarding) is not a function
+   × profile facets > trims, de-duplicates and bounds what a person says about themselves 6ms
+     → (0 , setProfileFacets) is not a function
+   × profile facets > leaves untouched facets alone 2ms
+     → (0 , setProfileFacets) is not a function
+   × profile facets > does not exist as a way to change somebody else 5ms
+     → (0 , setProfileFacets) is not a function
+ ✓ |db| test/flows.test.ts (16 tests) 38ms
+ ✓ |geo| test/gazetteer.test.ts (11 tests) 18ms
+ ✓ |db| test/demo-data.test.ts (9 tests) 23ms
+ ✓ |core| test/safety-invariants.test.ts (38 tests) 13ms
+ ✓ |core| test/ranking.test.ts (7 tests) 6ms
+ ✓ |core| test/capabilities.test.ts (10 tests) 8ms
+ ✓ |core| test/analytics.test.ts (6 tests) 6ms
+ ✓ |db| test/schema.test.ts (7 tests) 5ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |core| test/features.test.ts [ packages/core/test/features.test.ts ]
+Error: Cannot find module '../src/config/features' imported from '/home/petranto/projects/indenoi/packages/core/test/features.test.ts'
+ ❯ test/features.test.ts:3:1
+      1| import { describe, expect, it } from 'vitest';
+      2| 
+      3| import {
+       | ^
+      4|   DEMO_FEATURES,
+      5|   PRODUCTION_CAPABILITY_FLAGS,
+
+Caused by: Error: Failed to load url ../src/config/features (resolved id: ../src/config/features) in /home/petranto/projects/indenoi/packages/core/test/features.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  |web| test/api.test.ts [ apps/web/test/api.test.ts ]
+Error: Cannot find module '../app/api/insights/route' imported from '/home/petranto/projects/indenoi/apps/web/test/api.test.ts'
+ ❯ test/api.test.ts:9:1
+      7| import { POST as block } from '../app/api/blocks/route';
+      8| import { GET as searchCities, POST as addCity } from '../app/api/citie…
+      9| import { GET as insights } from '../app/api/insights/route';
+       | ^
+     10| import { POST as report } from '../app/api/reports/route';
+     11| import { POST as createSignal } from '../app/api/signals/route';
+
+Caused by: Error: Failed to load url ../app/api/insights/route (resolved id: ../app/api/insights/route) in /home/petranto/projects/indenoi/apps/web/test/api.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  |web| test/routes.test.ts [ apps/web/test/routes.test.ts ]
+Error: Cannot find module '../app/api/active-city/route' imported from '/home/petranto/projects/indenoi/apps/web/test/routes.test.ts'
+ ❯ test/routes.test.ts:6:1
+      4| import { CITY_IDS } from '@indenoi/geo';
+      5| 
+      6| import { POST as setActiveCity } from '../app/api/active-city/route';
+       | ^
+      7| import { GET as discover } from '../app/api/discover/route';
+      8| import { GET as insights } from '../app/api/insights/route';
+
+Caused by: Error: Failed to load url ../app/api/active-city/route (resolved id: ../app/api/active-city/route) in /home/petranto/projects/indenoi/apps/web/test/routes.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  |web| test/ui.test.ts [ apps/web/test/ui.test.ts ]
+Error: Cannot find module '../lib/city' imported from '/home/petranto/projects/indenoi/apps/web/test/ui.test.ts'
+ ❯ test/ui.test.ts:7:1
+      5| 
+      6| import { artworkFor, initials } from '../lib/art';
+      7| import { ACTIVE_CITY_COOKIE, activeCityCookieHeader, activeCityFrom } …
+       | ^
+      8| import { REASON_LABELS, explain, relativeTime, untilTime } from '../li…
+      9| import { TABS } from '../lib/nav';
+
+Caused by: Error: Failed to load url ../lib/city (resolved id: ../lib/city) in /home/petranto/projects/indenoi/apps/web/test/ui.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |db| test/onboarding.test.ts > onboarding > refuses an age below the baseline and writes nothing at all
+TypeError: (0 , completeOnboarding) is not a function
+ ❯ test/onboarding.test.ts:16:26
+     14| describe('onboarding', () => {
+     15|   it('refuses an age below the baseline and writes nothing at all', as…
+     16|     const result = await completeOnboarding(ports, {
+       |                          ^
+     17|       actorId: DEMO_USERS.lea,
+     18|       declaredAge: 14,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > onboarding > keeps only the band, never the declared age
+TypeError: (0 , completeOnboarding) is not a function
+ ❯ test/onboarding.test.ts:30:26
+     28| 
+     29|   it('keeps only the band, never the declared age', async () => {
+     30|     const result = await completeOnboarding(ports, {
+       |                          ^
+     31|       actorId: DEMO_USERS.lea,
+     32|       declaredAge: 34,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > onboarding > refuses a declared age that contradicts the account age band
+TypeError: (0 , completeOnboarding) is not a function
+ ❯ test/onboarding.test.ts:45:26
+     43|   it('refuses a declared age that contradicts the account age band', a…
+     44|     // Inès is a minor account. Declaring an adult age must not silent…
+     45|     const result = await completeOnboarding(ports, {
+       |                          ^
+     46|       actorId: DEMO_USERS.ines,
+     47|       declaredAge: 41,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > onboarding > attaches the chosen city and records what the person does
+TypeError: (0 , completeOnboarding) is not a function
+ ❯ test/onboarding.test.ts:55:26
+     53| 
+     54|   it('attaches the chosen city and records what the person does', asyn…
+     55|     const result = await completeOnboarding(ports, {
+       |                          ^
+     56|       actorId: DEMO_USERS.tom,
+     57|       declaredAge: 29,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > profile facets > trims, de-duplicates and bounds what a person says about themselves
+TypeError: (0 , setProfileFacets) is not a function
+ ❯ test/onboarding.test.ts:76:26
+     74| describe('profile facets', () => {
+     75|   it('trims, de-duplicates and bounds what a person says about themsel…
+     76|     const result = await setProfileFacets(ports, {
+       |                          ^
+     77|       actorId: DEMO_USERS.tom,
+     78|       practices: ['  Climbing ', 'climbing', '', 'x'.repeat(200)],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > profile facets > leaves untouched facets alone
+TypeError: (0 , setProfileFacets) is not a function
+ ❯ test/onboarding.test.ts:90:11
+     88|   it('leaves untouched facets alone', async () => {
+     89|     const before = await ports.repo.getPerson(DEMO_USERS.lea);
+     90|     await setProfileFacets(ports, { actorId: DEMO_USERS.lea, interests…
+       |           ^
+     91|     const after = await ports.repo.getPerson(DEMO_USERS.lea);
+     92|     expect(after?.practices).toEqual(before?.practices);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/11]⎯
+
+ FAIL  |db| test/onboarding.test.ts > profile facets > does not exist as a way to change somebody else
+TypeError: (0 , setProfileFacets) is not a function
+ ❯ test/onboarding.test.ts:97:26
+     95| 
+     96|   it('does not exist as a way to change somebody else', async () => {
+     97|     const result = await setProfileFacets(ports, { actorId: 'usr-nobod…
+       |                          ^
+     98|     expect(result).toEqual({ ok: false, reason: 'not_found' });
+     99|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/11]⎯
+
+
+ Test Files  5 failed | 8 passed (13)
+      Tests  7 failed | 104 passed (111)
+   Start at  17:12:07
+   Duration  3.78s (transform 589ms, setup 0ms, collect 951ms, tests 162ms, environment 2ms, prepare 702ms)
+
+ ELIFECYCLE  Test failed. See above for more details.

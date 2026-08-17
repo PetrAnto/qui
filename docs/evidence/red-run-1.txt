@@ -1,0 +1,123 @@
+
+ RUN  v3.2.7 /home/petranto/projects/indenoi
+
+ DEPRECATED  'basic' reporter is deprecated and will be removed in Vitest v3.
+Remove 'basic' from 'reporters' option. To match 'basic' reporter 100%, use configuration:
+{
+  "test": {
+    "reporters": [
+      [
+        "default",
+        {
+          "summary": false
+        }
+      ]
+    ]
+  }
+}
+ ✓ |core| test/safety-invariants.test.ts (38 tests) 10ms
+ ✓ |core| test/ranking.test.ts (7 tests) 4ms
+ ✓ |core| test/capabilities.test.ts (10 tests) 16ms
+ ✓ |core| test/analytics.test.ts (6 tests) 5ms
+
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |geo| test/gazetteer.test.ts [ packages/geo/test/gazetteer.test.ts ]
+Error: Cannot find module '../src/index' imported from '/home/petranto/projects/indenoi/packages/geo/test/gazetteer.test.ts'
+ ❯ test/gazetteer.test.ts:3:1
+      1| import { describe, expect, it } from 'vitest';
+      2| 
+      3| import {
+       | ^
+      4|   CITY_IDS,
+      5|   GAZETTEER,
+
+Caused by: Error: Failed to load url ../src/index (resolved id: ../src/index) in /home/petranto/projects/indenoi/packages/geo/test/gazetteer.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |db| test/demo-data.test.ts [ packages/db/test/demo-data.test.ts ]
+Error: Failed to resolve entry for package "@indenoi/geo". The package may have incorrect main/module/exports specified in its package.json.
+  Plugin: vite:import-analysis
+  File: /home/petranto/projects/indenoi/packages/db/test/demo-data.test.ts:3:25
+  1  |  import { describe, expect, it } from "vitest";
+  2  |  import { CITY_IDS } from "@indenoi/geo";
+     |                            ^
+  3  |  import { DEMO_HANDLES, buildDemoDataset, createDemoPorts } from "../src/demo/index";
+  4  |  describe("deterministic demo dataset", () => {
+ ❯ packageEntryFailure ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32896:32
+ ❯ resolvePackageEntry ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32893:2
+ ❯ tryNodeResolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32796:70
+ ❯ ResolveIdContext.handler ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32635:16
+ ❯ EnvironmentPluginContainer.resolveId ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:28797:56
+ ❯ TransformPluginContext.resolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:29009:13
+ ❯ normalizeUrl ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27191:22
+ ❯ ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27257:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |db| test/flows.test.ts [ packages/db/test/flows.test.ts ]
+Error: Failed to resolve entry for package "@indenoi/geo". The package may have incorrect main/module/exports specified in its package.json.
+  Plugin: vite:import-analysis
+  File: /home/petranto/projects/indenoi/packages/db/test/flows.test.ts:24:25
+  20 |    toActorView
+  21 |  } from "@indenoi/core";
+  22 |  import { CITY_IDS } from "@indenoi/geo";
+     |                            ^
+  23 |  import { DEMO_USERS, createDemoPorts } from "../src/demo/index";
+  24 |  let ports;
+ ❯ packageEntryFailure ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32896:32
+ ❯ resolvePackageEntry ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32893:2
+ ❯ tryNodeResolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32796:70
+ ❯ ResolveIdContext.handler ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32635:16
+ ❯ EnvironmentPluginContainer.resolveId ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:28797:56
+ ❯ TransformPluginContext.resolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:29009:13
+ ❯ normalizeUrl ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27191:22
+ ❯ ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27257:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |db| test/schema.test.ts [ packages/db/test/schema.test.ts ]
+Error: Cannot find module '../src/schema' imported from '/home/petranto/projects/indenoi/packages/db/test/schema.test.ts'
+ ❯ test/schema.test.ts:6:1
+      4| import { describe, expect, it } from 'vitest';
+      5| 
+      6| import * as schema from '../src/schema';
+       | ^
+      7| 
+      8| const MIGRATIONS_DIR = join(import.meta.dirname, '..', 'migrations');
+
+Caused by: Error: Failed to load url ../src/schema (resolved id: ../src/schema) in /home/petranto/projects/indenoi/packages/db/test/schema.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |web| test/api.test.ts [ apps/web/test/api.test.ts ]
+Error: Failed to resolve entry for package "@indenoi/geo". The package may have incorrect main/module/exports specified in its package.json.
+  Plugin: vite:import-analysis
+  File: /home/petranto/projects/indenoi/apps/web/test/api.test.ts:4:25
+  1  |  import { beforeEach, describe, expect, it } from "vitest";
+  2  |  import { DEMO_USERS } from "@indenoi/db/demo";
+  3  |  import { CITY_IDS } from "@indenoi/geo";
+     |                            ^
+  4  |  import { POST as appreciate } from "../app/api/appreciations/route";
+  5  |  import { POST as block } from "../app/api/blocks/route";
+ ❯ packageEntryFailure ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32896:32
+ ❯ resolvePackageEntry ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32893:2
+ ❯ tryNodeResolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32796:70
+ ❯ ResolveIdContext.handler ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:32635:16
+ ❯ EnvironmentPluginContainer.resolveId ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:28797:56
+ ❯ TransformPluginContext.resolve ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:29009:13
+ ❯ normalizeUrl ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27191:22
+ ❯ ../../node_modules/.pnpm/vite@7.3.6_@types+node@22.20.1_terser@5.16.9_tsx@4.23.12_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:27257:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  5 failed | 4 passed (9)
+      Tests  61 passed (61)
+   Start at  16:56:29
+   Duration  2.94s (transform 295ms, setup 0ms, collect 322ms, tests 36ms, environment 4ms, prepare 906ms)
+
