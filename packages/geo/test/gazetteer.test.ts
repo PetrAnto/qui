@@ -118,5 +118,8 @@ describe('worldwide city index', () => {
 
   it('keeps seed cities first when names collide', () => {
     expect(searchCities('porto')[0]?.id).toBe(CITY_IDS.porto);
+    const ajaccio = searchCities('ajaccio');
+    expect(ajaccio.filter((scope) => scope.name === 'Ajaccio' && scope.countryCode === 'FR')).toHaveLength(1);
+    expect(ajaccio[0]?.id).toBe(CITY_IDS.ajaccio);
   });
 });

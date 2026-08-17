@@ -20,7 +20,7 @@ async function onboard(page: Page, age: string): Promise<void> {
   await page.getByLabel('Your age').fill(age);
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('City').fill('Ajaccio');
-  await page.getByRole('button', { name: /Ajaccio/ }).click();
+  await page.getByRole('button', { name: /Ajaccio/ }).first().click();
   await page.getByLabel('What is it to you?').selectOption('resident');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('I practise… (comma separated)').fill('bike repair, freediving');

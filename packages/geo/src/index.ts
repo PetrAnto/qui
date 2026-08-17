@@ -75,11 +75,15 @@ export function searchCities(query: string, limit = 12): readonly GeoScope[] {
   }
   const byName = (a: GeoScope, b: GeoScope): number => (a.name < b.name ? -1 : 1);
   const seed = [...prefix.sort(byName), ...contains.sort(byName)];
-  if (seed.length >= limit) return seed.slice(0, limit);
-
+  const seen = new Set(seed.map((scope) => `${fold(scope.name)}|${scope.countryCode}`));
   const world = searchWorldCities(query, {
-    limit: limit - seed.length,
+    limit: Math.max(limit, 24),
     excludeGeonameIds: SEED_GEONAME_IDS,
+  }).filter((scope) => {
+    const key = `${fold(scope.name)}|${scope.countryCode}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
   return [...seed, ...world].slice(0, limit);
 }
