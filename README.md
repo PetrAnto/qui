@@ -15,6 +15,9 @@ codename `indenoi` in package names.
 Editorial landing photographs are not members. Nothing here is real-user
 production.**
 
+Licensed under [Apache-2.0](LICENSE). Third-party GeoNames data and editorial
+photographs keep their own licences — see [NOTICE](NOTICE).
+
 ## What this build is
 
 A working vertical slice of QUI’s rules. Every screen, route handler, policy
