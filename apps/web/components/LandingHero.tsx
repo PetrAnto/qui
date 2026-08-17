@@ -66,17 +66,16 @@ export function LandingHero() {
       </div>
 
       <p className="landing__credits faint">
-        Photography (editorial, not members):{' '}
+        Photography by{' '}
         {credits.map((photo, index) => (
           <span key={photo.id}>
-            {index > 0 ? '; ' : null}
+            {index > 0 ? ', ' : null}
             <a href={photo.sourcePage} rel="noreferrer">
               {photo.attribution}
             </a>
-            {` (${photo.license})`}
           </span>
         ))}
-        . Full provenance in the repository.
+        . Editorial only — not members.
       </p>
     </section>
   );

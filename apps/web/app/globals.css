@@ -635,15 +635,17 @@ main:focus {
 
 .landing__wordmark {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.28em;
   color: var(--coral);
 }
 
 .landing h1 {
   font-size: 2rem;
   letter-spacing: -0.03em;
+  border-bottom: 2px solid hsl(12 72% 58% / 0.45);
+  padding-bottom: 0.35rem;
 }
 
 .landing__lede {
@@ -661,23 +663,22 @@ main:focus {
 .landing__stage {
   position: relative;
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1.15fr 0.95fr;
   grid-template-rows: auto auto auto;
   gap: 0.55rem;
-  min-height: 18rem;
   isolation: isolate;
-  overflow: hidden;
 }
 
 .landing__stage::before {
   content: '';
   position: absolute;
-  inset: 8% 18% auto 8%;
-  height: 42%;
-  border: 1px solid hsl(12 72% 58% / 0.22);
+  inset: 4% 8% auto auto;
+  width: 38%;
+  height: 36%;
+  border: 1px solid hsl(12 72% 58% / 0.38);
   border-radius: 999px;
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
 }
 
 .landing__frame {
@@ -699,61 +700,67 @@ main:focus {
 
 .landing__frame--photographer-street {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-row: 1 / 3;
+  align-self: stretch;
   min-height: 16rem;
-  aspect-ratio: 3 / 4;
 }
 
-.landing__frame--guitarist-field {
+.landing__frame--carpenter-workshop {
   grid-column: 2;
   grid-row: 1;
   min-height: 8.5rem;
   aspect-ratio: 4 / 5;
 }
 
-.landing__frame--guitarist-field img {
-  object-position: 50% 18%;
+.landing__frame--carpenter-workshop img {
+  object-position: 70% 18%;
 }
 
-.landing__frame--photographer-mature {
+.landing__frame--street-accordion {
   grid-column: 2;
   grid-row: 2;
   min-height: 7rem;
   aspect-ratio: 5 / 4;
 }
 
-.landing__frame--street-accordion {
-  grid-column: 1;
-  grid-row: 3;
-  min-height: 6.5rem;
-  aspect-ratio: 5 / 4;
+.landing__frame--street-accordion img {
+  object-position: 50% 18%;
 }
 
-.landing__frame--craft-tongs {
-  grid-column: 2;
+.landing__frame--skate-park {
+  grid-column: 1 / -1;
   grid-row: 3;
-  opacity: 0.72;
-  filter: saturate(0.7);
   min-height: 6.5rem;
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 16 / 7;
+}
+
+.landing__frame--skate-park img {
+  object-position: 55% 70%;
 }
 
 .landing__frame--history-fisherman {
   position: absolute;
-  inset: auto auto -6% -8%;
-  width: 42%;
-  aspect-ratio: 3 / 4;
-  opacity: 0.16;
-  filter: grayscale(1) contrast(1.15);
-  z-index: 0;
+  inset: auto auto 0 0;
+  width: 28%;
+  height: 38%;
+  opacity: 0.38;
+  filter: grayscale(1) contrast(1.4);
+  z-index: 2;
   pointer-events: none;
   border: 0;
-  border-radius: 0;
+  border-radius: 0 1.1rem 0 1.1rem;
   background: transparent;
+  mix-blend-mode: luminosity;
+}
+
+.landing__frame--history-fisherman img {
+  object-position: 50% 20%;
 }
 
 .landing__credits {
   margin: 0;
+  order: 8;
+  font-size: 0.72rem;
 }
 
 .landing__credits a {
@@ -780,8 +787,9 @@ main:focus {
 
   .landing__stage {
     grid-column: 2;
-    grid-row: 1 / span 3;
-    min-height: 32rem;
+    grid-row: 1 / span 2;
+    align-self: start;
+    min-height: 0;
     position: sticky;
     top: 3.5rem;
   }
@@ -801,13 +809,13 @@ main:focus {
   }
 
   .landing__frame--photographer-street {
-    min-height: 22rem;
+    min-height: 18rem;
   }
 
   .landing__frame--history-fisherman {
-    inset: 0 auto auto 0;
-    width: 36%;
-    opacity: 0.11;
+    width: 28%;
+    height: 42%;
+    opacity: 0.24;
   }
 }
 
@@ -823,24 +831,27 @@ main:focus {
     min-height: 14rem;
   }
 
-  .landing__frame--guitarist-field {
+  .landing__frame--carpenter-workshop {
     grid-column: 1;
     grid-row: 2;
   }
 
-  .landing__frame--photographer-mature {
+  .landing__frame--street-accordion {
     grid-column: 2;
     grid-row: 2;
   }
 
-  .landing__frame--street-accordion,
-  .landing__frame--craft-tongs {
-    display: none;
+  .landing__frame--skate-park {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    aspect-ratio: 16 / 7;
+    min-height: 5.5rem;
   }
 
   .landing__frame--history-fisherman {
-    width: 56%;
-    opacity: 0.12;
+    width: 42%;
+    height: 34%;
+    opacity: 0.22;
   }
 }
 
