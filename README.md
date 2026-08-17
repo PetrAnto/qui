@@ -85,6 +85,7 @@ and why it is a baseline rather than a locked decision.
 | [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | The open questions and how we would answer them. |
 | [docs/TEST_EVIDENCE.md](docs/TEST_EVIDENCE.md) | What is actually verified, and what is not. |
 | [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) | What must be true before this touches a real user. |
+| [docs/RELEASE_REVIEW.md](docs/RELEASE_REVIEW.md) | Adversarial review of the landed demo SHA; deploy decision. |
 | [docs/legal/AGE_BASELINE.md](docs/legal/AGE_BASELINE.md) | The 15+ baseline and its sources. |
 | [docs/geo/PROVENANCE.md](docs/geo/PROVENANCE.md) | Where the geography data comes from, and its licence. |
 | [docs/threat-model/MINORS_AND_LOCAL_CONFLICT.md](docs/threat-model/MINORS_AND_LOCAL_CONFLICT.md) | The two threat models the design actually targets. |

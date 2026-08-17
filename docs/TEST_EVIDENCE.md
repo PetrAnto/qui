@@ -57,23 +57,30 @@ not evidence that it tests anything.
 
 ## End-to-end suite — PASSING
 
-`e2e/mobile-smoke.spec.ts` contains **13 Playwright tests** on a Pixel 7
+`e2e/mobile-smoke.spec.ts` contains **15 Playwright tests** on a Pixel 7
 viewport, serial, against the production build (`next start`), covering: the
 demo banner on every screen, age-baseline refusal, onboarding into Discover,
 thumb-reachable tab bar, appreciation and score breakdown, unconditional city
 switching, refusal of local publishing without a tie, signal-gated contact,
 evidence-not-score profiles, report and block, the insights view, the persona
-switcher, and a minor's absence from adult people discovery.
+switcher, a minor's absence from adult people discovery, keyboard skip-link /
+tab navigation, and `prefers-reduced-motion` honoured in CSS.
 
-The first local attempt exposed four test-harness defects: an ambiguous text
-locator, cross-test cookie assumptions, a missing explicit add-city step, and a
-signal selector that targeted an age-ineligible card. The tests were corrected
-without weakening product assertions. The completed production-build run was:
+Recorded local runs:
 
 ```
-Running 13 tests using 1 worker
-13 passed (18.4s)
+2026-08-16  Running 13 tests using 1 worker — 13 passed (18.4s)
+2026-08-17  Running 13 tests using 1 worker — 13 passed (19.6s)  # pre-hardening
 ```
+
+Hardening branch local verification (2026-08-17):
+
+```
+pnpm test          → 160 passed
+pnpm e2e           → 15 passed (21.0s)
+pnpm verify:opennext → OpenNext build OK; workerd preview GET /welcome 200 with demo banner
+```
+
 
 Executed with the installed Playwright Chromium at a Pixel 7 viewport:
 
@@ -83,6 +90,24 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/home/petranto/.cache/ms-playwright/chromium-1228
 
 The portable CI path still installs Chromium with Playwright before running the
 same suite.
+
+## OpenNext / workerd — scripted
+
+```sh
+pnpm verify:opennext
+```
+
+Builds the OpenNext Cloudflare worker bundle and optionally boots a short
+preview smoke that asserts the demo banner is present. This is **not** a
+Cloudflare account deploy. See `scripts/verify-opennext.sh` and
+[RELEASE_REVIEW.md](RELEASE_REVIEW.md).
+
+## Release review
+
+Adversarial product / safety / operator review of main SHA
+`2a42f08c9fdef7229dff1fb4af3be460841a7dc5` is recorded in
+[RELEASE_REVIEW.md](RELEASE_REVIEW.md). Production deploy remains **NO-GO**.
+
 
 ## Static checks
 

@@ -18,6 +18,7 @@
     "build": "pnpm --filter web build",
     "build:opennext": "pnpm --filter web build:opennext",
     "preview": "pnpm --filter web preview",
+    "verify:opennext": "bash scripts/verify-opennext.sh",
     "db:generate": "pnpm --filter @indenoi/db db:generate",
     "db:check": "pnpm --filter @indenoi/db db:check",
     "verify": "pnpm lint && pnpm typecheck && pnpm test"

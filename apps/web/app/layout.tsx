@@ -28,9 +28,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
         <div className="app">
           <DemoBanner />
-          <main className="app__main">{children}</main>
+          <main id="main" className="app__main" tabIndex={-1}>
+            {children}
+          </main>
           <footer className="faint" style={{ padding: '0 1.05rem 6rem' }}>
             {GEO_ATTRIBUTION}
           </footer>

@@ -70,6 +70,15 @@ describe('navigation', () => {
   });
 });
 
+describe('accessibility surface contracts', () => {
+  it('keeps tab labels human-readable for assistive tech', () => {
+    for (const tab of TABS) {
+      expect(tab.label.trim().length).toBeGreaterThan(1);
+      expect(tab.glyph.length).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('active city cookie', () => {
   it('round-trips a scope id', () => {
     const header = activeCityCookieHeader(CITY_IDS.kilrush);
