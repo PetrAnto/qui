@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "indenoi-web",
+  "name": "qui-demo",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
   // OpenNext needs the Node.js compatibility layer, and `nodejs_compat_populate_process_env`
@@ -13,9 +13,9 @@
   "observability": {
     "enabled": true
   },
-  // No deployment has been performed and no account is configured here on
-  // purpose: provisioning is a decision for a human with an account, not
-  // something a build should do. See RELEASE_CHECKLIST.md.
+  // No Cloudflare account id is stored here. Auth is process-local
+  // (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN). A public *synthetic*
+  // demo may be deployed (ADR-0015); real-user production stays fail-closed.
   //
   // Persistence (ADR-0011) arrives as a D1 binding. It is commented out rather
   // than pointed at a placeholder id, so that `wrangler deploy` cannot succeed
