@@ -12,8 +12,7 @@ or any sentence that would make a visitor think the depicted people use, live
 near, or endorse QUI / indenoi.
 
 Copyright permission is not automatically evidence of personality / publicity
-rights. Residual risk is recorded below. When rights are materially unclear, the
-image is rejected.
+rights. Residual risk is recorded below.
 
 Replacement procedure: pick another image from
 [landing-hero-candidates.md](landing-hero-candidates.md) whose rights-confidence
@@ -36,73 +35,59 @@ sync.
 | Attribution required | Yes — “Pedro Ribeiro Simões” + licence + link |
 | Modifications | Cropped; converted to WebP; resized to 1400px |
 | Commercial-use notes | CC BY 2.0 permits commercial reuse with attribution |
-| Personality-right notes | Identifiable contemporary person. Commons lists no `Restrictions: personality`. No model-release evidence. **Residual publicity-right risk.** Editorial framing only. Visible Nikon markings on the camera are incidental equipment, not a product placement. |
-| Why selected | Dominant image: a real activity in a real public place. Not a dating-app pose. |
+| Personality-right notes | Identifiable contemporary person. Commons lists no `Restrictions: personality`. No model-release evidence. **Residual publicity-right risk.** Editorial framing only. Visible Nikon markings are incidental equipment. |
+| Why selected | Dominant image: a real activity in a real public place. Not a dating-app pose. Independent review (F09) accepted this frame. |
 | Represented life stage | Young adult (visual estimate only; not a claim) |
 
-### `guitarist-field.webp`
+### `carpenter-workshop.webp`
 
 | Field | Value |
 |---|---|
-| Local file | `apps/web/public/landing-hero/guitarist-field.webp` |
-| Source page | https://commons.wikimedia.org/wiki/File:*_A_young_electronic_guitar_player_playing_in_nature_*_07.jpg |
-| Creator | Mostafameraji |
+| Local file | `apps/web/public/landing-hero/carpenter-workshop.webp` |
+| Source page | https://commons.wikimedia.org/wiki/File:A_carpenter_creating_measurements.jpg |
+| Direct asset | https://upload.wikimedia.org/wikipedia/commons/c/c8/A_carpenter_creating_measurements.jpg |
+| Creator | Rwebogora |
 | Platform | Wikimedia Commons |
-| Licence | CC BY 4.0 |
-| Attribution required | Yes |
-| Modifications | Cropped; converted to WebP; resized to 1200px |
-| Commercial-use notes | CC BY 4.0 permits commercial reuse with attribution |
-| Personality-right notes | Identifiable contemporary person. Source description names an Iranian band (Mortaz). The landing **does not name the person or the band**. Residual endorsement / publicity risk if a visitor recognises them. Sunglasses may include a recognisable eyewear shape; not used as a brand ad. |
-| Why selected | Attractiveness + a visible practice (guitar), not a fashion-model stare with no activity. |
-| Represented life stage | Young adult |
-
-### `photographer-mature.webp`
-
-| Field | Value |
-|---|---|
-| Local file | `apps/web/public/landing-hero/photographer-mature.webp` |
-| Source page | https://commons.wikimedia.org/wiki/File:Chinese_woman_photographer_in_Maracaibo.jpg |
-| Creator | Wilfredor |
-| Platform | Wikimedia Commons |
-| Licence | CC0 1.0 |
-| Attribution required | No (credited anyway) |
-| Modifications | Cropped toward the face; converted to WebP |
-| Commercial-use notes | CC0 waives copyright |
-| Personality-right notes | Identifiable contemporary person. No model-release evidence. **Residual publicity-right risk.** Visible Sony / α / HDMI markings on the camera — incidental equipment, not an endorsement of Sony. |
-| Why selected | Intergenerational breadth. A mature adult *doing* something. |
-| Represented life stage | Mature adult |
+| Licence | CC BY-SA 4.0 (Commons API, 2026-08-17) |
+| Attribution required | Yes; share-alike applies to adaptations |
+| Modifications | Converted to WebP; resized to 960px wide |
+| Commercial-use notes | CC BY-SA 4.0 permits commercial reuse with attribution and SA |
+| Personality-right notes | Identifiable contemporary person. No model-release evidence. **Residual publicity-right risk.** |
+| Why selected | Authentic workshop practice. Replaced a posed field-guitar portrait. |
+| Represented life stage | Adult (visual estimate only) |
 
 ### `street-accordion.webp`
 
 | Field | Value |
 |---|---|
 | Local file | `apps/web/public/landing-hero/street-accordion.webp` |
-| Source page | https://commons.wikimedia.org/wiki/File:2017-07-17_Notes_for_Notes.jpg |
-| Creator | Alan Veale |
-| Platform | Wikimedia Commons, originally Flickr |
-| Licence | CC BY-SA 2.0 |
+| Source page | https://commons.wikimedia.org/wiki/File:A_Street_Musician_(25517139).jpeg |
+| Direct asset | https://upload.wikimedia.org/wikipedia/commons/2/2a/A_Street_Musician_%2825517139%29.jpeg |
+| Creator | Sergey Ivanov |
+| Platform | Wikimedia Commons / 500px Archive Team import |
+| Licence | CC BY-SA 3.0 (Commons API, 2026-08-17; Restrictions empty) |
 | Attribution required | Yes; share-alike applies to adaptations |
-| Modifications | Cropped; converted to WebP. The WebP is a modified copy for this site, not redistributed as a standalone stock file. |
-| Commercial-use notes | CC BY-SA 2.0 permits commercial reuse with attribution and SA |
-| Personality-right notes | Identifiable contemporary person. No model-release evidence. **Residual publicity-right risk.** |
-| Why selected | Local character + music, not a polished model. |
-| Represented life stage | Mature adult |
+| Modifications | Cropped toward the musician to exclude shopping-bag marks; converted to WebP |
+| Commercial-use notes | CC BY-SA 3.0 permits commercial reuse with attribution and SA |
+| Personality-right notes | Identifiable contemporary person. No model-release evidence. **Residual publicity-right risk.** Face turned toward the instrument. |
+| Why selected | Replaced a second camera portrait (camera-club reading) and a Pexels busker cliché. Mature adult, public practice, not a headshot. |
+| Represented life stage | Mature adult (visual estimate only) |
 
-### `craft-tongs.webp`
+### `skate-park.webp`
 
 | Field | Value |
 |---|---|
-| Local file | `apps/web/public/landing-hero/craft-tongs.webp` |
-| Source page | https://commons.wikimedia.org/wiki/File:Blacksmith_at_the_Chokhi_Dhani_Resort_Panchkula_07.jpg |
-| Creator | Kritzolina |
-| Platform | Wikimedia Commons |
-| Licence | CC BY-SA 4.0 |
-| Attribution required | Yes; share-alike |
-| Modifications | Cropped to the hands/tools; converted to WebP |
-| Commercial-use notes | CC BY-SA 4.0 permits commercial reuse with attribution and SA |
-| Personality-right notes | Face not shown. Still a real person’s hands. Used as a decorative practice texture, empty alt. |
-| Why selected | Contemporary craft as a bridge to the historical blacksmith / fisherman idea, without a costume portrait. |
-| Represented life stage | Not claimed |
+| Local file | `apps/web/public/landing-hero/skate-park.webp` |
+| Source page | https://www.pexels.com/photo/teenage-boys-skateboarding-in-skate-park-at-sunset-17024829/ |
+| Creator | Wallace Chuck |
+| Platform | Pexels |
+| Licence | Pexels License (photo page retrieved 2026-08-17) |
+| Attribution required | No; credited anyway |
+| Modifications | Converted to WebP; CSS crop toward the activity, not faces |
+| Commercial-use notes | Website / commercial use and modification allowed. Implied endorsement and standalone resale prohibited. |
+| Personality-right notes | Source title describes the subjects as teenagers. Faces are largely in shadow / turned away. **No sensual styling.** Selection criterion was sport only. Residual minor-publicity risk: replace if a jurisdiction treats this as commercial advertising of identifiable minors. Landing copy does not name them or call them users. |
+| Why selected | Intergenerational breadth via sport, not attractiveness. Independent review (F10) accepted this frame. |
+| Represented life stage | Young person / teenager (source description; not an exact-age claim) |
 
 ### `history-fisherman.webp`
 
@@ -112,24 +97,41 @@ sync.
 | Source page | https://commons.wikimedia.org/wiki/File:Eiland_Marken_-_Visser_1900.jpg |
 | Creator | Unknown. Library of Congress photochrome, “Eiland Marken — Visscher”, ca. 1900 |
 | Platform | Wikimedia Commons / Library of Congress |
-| Licence | Public domain (Commons: `Copyrighted: False`, `UsageTerms: Public domain`) |
+| Licence | Public domain |
 | Attribution required | No (credited for honesty) |
-| Modifications | Caption cropped; converted to greyscale WebP; contrast adjusted; used at low opacity |
-| Commercial-use notes | Public-domain photochrome; old enough that personality-right ambiguity is substantially reduced |
+| Modifications | Caption cropped; tighter figure crop; greyscale WebP; low-opacity luminosity blend |
+| Commercial-use notes | Public-domain photochrome |
 | Personality-right notes | Historical. Residual risk treated as low. |
-| Why selected | The only historical layer. A local fisherman as a quiet memory behind contemporary people, not a museum exhibit. |
+| Why selected | The only historical layer. Cropped so the figure reads as a quiet memory behind contemporary people, not a museum card. |
+| Represented life stage | Historical |
 
-## Residual risks (all final contemporary faces)
+## Independent visual review
 
-1. **No model-release file** was available for any contemporary subject.
-2. **Personality / publicity rights** in some jurisdictions can restrict commercial
-   advertising use of a recognisable face even when copyright is cleared.
-   Mitigation: editorial framing, explicit non-endorsement copy, no fake
-   profiles, no “people near you” overlay.
-3. **Camera-brand marks** appear in two photographs. They are not the subject
-   and are not used to advertise those brands.
-4. **A teenager is not in the final set.** Several candidates were a mural of a
-   child, a school group, or rights-unclear. Composition quality and rights
-   confidence beat a mechanical age quota.
+An independent creative-director review of an earlier screenshot set
+(`deleg_5caa3fda`, 2026-08-17) classified 21 findings. Actions taken:
+
+| ID | Classification | Response |
+|---|---|---|
+| F01 empty mobile well | REJECT | Mobile now keeps carpenter + accordion + skate; no hidden support tiles. |
+| F02 invisible fisherman | REJECT | Tighter figure crop, higher opacity, corner texture on all breakpoints. |
+| F03 age-gate first action | REJECT | **Kept.** Age is a LOCKED onboarding gate (ADR-0002). Visual hero sits above it; the question is not redesigned away. |
+| F04 / F05 global stock mosaic | MODIFY | Dropped Pexels busker and second camera. Four contemporary frames, three Commons. Credits no longer name stock agencies in the primary path. |
+| F06 dating-onboarding rhyme | MODIFY | Removed the tight older-woman face crop. Remaining faces are practice-first. |
+| F07 camera club | MODIFY | Only one photographer remains. |
+| F08 mature headshot | MODIFY | Replaced with accordion musician. |
+| F09 street photographer | ACCEPT | Kept as dominant. |
+| F10 skate | ACCEPT | Kept. |
+| F11 Pexels busker | MODIFY | Replaced with Commons accordionist. |
+| F12 carpenter as diversity token | MODIFY | Kept for craft authenticity; reduced the occupation checkerboard by dropping the second photographer. |
+| F14 brand coral unused | MODIFY | Larger coral wordmark, coral underline on the headline, stronger coral ring. |
+| F19 credits advertise Pexels | MODIFY | Credits now list photographers only; licences live in this file. |
 
 This is not a legal opinion.
+
+## Residual risks
+
+1. **No model-release file** for any contemporary subject.
+2. **Personality / publicity rights** can still restrict commercial advertising of a recognisable face. Mitigation: editorial framing, explicit non-endorsement copy, no fake profiles.
+3. **Camera-brand marks** appear in the dominant photograph. Incidental, not advertised.
+4. **One Pexels photo is described by its source as teenage.** Sport-first, faces not the crop, not paired romantically with an adult.
+5. A swimsuit accordion portrait, a posed field-guitar portrait, a second camera headshot, and a Pexels sidewalk guitarist were **removed after visual review**.
