@@ -82,7 +82,7 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
       {step === 'age' ? (
         <div className="stack">
           <header className="pagehead">
-            <h1>How old are you?</h1>
+            <h2>How old are you?</h2>
             <p className="pagehead__sub">
               Asked once. We keep whether you are 15–17 or 18+, and nothing else — not the number,
               not a birth date, not a document.
@@ -119,7 +119,7 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
       {step === 'place' ? (
         <div className="stack">
           <header className="pagehead">
-            <h1>Where are you?</h1>
+            <h2>Where are you?</h2>
             <p className="pagehead__sub">
               Pick a city and tell us what it is to you. No location permission, ever — this is a
               relationship, not a coordinate.
@@ -165,7 +165,7 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
       {step === 'doing' ? (
         <div className="stack">
           <header className="pagehead">
-            <h1>What do you actually do?</h1>
+            <h2>What do you actually do?</h2>
             <p className="pagehead__sub">
               Things you practise, not things you have opinions about. This is what Discover uses to
               put the right people in front of you.
@@ -201,7 +201,7 @@ export function Onboarding({ cities }: { cities: readonly CityOption[] }) {
       {step === 'ready' ? (
         <div className="stack">
           <header className="pagehead">
-            <h1>One honest thing first</h1>
+            <h2>One honest thing first</h2>
           </header>
           <p className="notice notice--warn">
             This build cannot create a real account. Sign-in is not implemented — it is a decision
