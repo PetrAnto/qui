@@ -44,7 +44,8 @@ proven otherwise.
 | Runtime store | in-isolate memory (no D1) |
 | Domain | `qui.social` **not attached** (zone not present in this Cloudflare account) |
 
-Runtime evidence for the 2026-08-19 redeploy (checked 08:45Z):
+Runtime evidence for the 2026-08-19 redeploy (checked 08:45Z, re-verified 09:00Z
+after owner confirmation):
 
 - All 5 `e2e/city-search.spec.ts` regressions pass **against the live URL**
   (20.3s, mobile viewport). These tests fail on pre-#31 behavior by
@@ -52,6 +53,27 @@ Runtime evidence for the 2026-08-19 redeploy (checked 08:45Z):
 - `GET /welcome` → 200, demo banner, `noindex`; `/` unauthenticated → 307
   `/welcome`; `/api/cities?q=Tokyo` → world-index `geo:city:gn-1850147`;
   `q=Kilrush` → seed `geo:city:kilrush`.
+
+Five-point deployment verification (2026-08-19T09:00Z):
+
+1. **Source SHA** — GitHub `main` is exactly
+   `615f8a3714abde7cccb03bd91b9890e4f376b5de`; the owner deployed from a clean
+   detached worktree of that SHA.
+2. **BUILD_ID** — live serves `_DmrsNtvDU4UUV7Y6VqsZ`, distinct from the
+   `d0043f6` deploy's `KAxqnTcx2ljKucuyQXAIS`. Next.js BUILD_ID is a per-build
+   random hash, so equality with a local rebuild is not the test; the changed
+   id plus the live regression pass (above) is the evidence the serving bundle
+   is the #31-fixed tree.
+3. **Honest demo identity** — `/welcome` responds 200 with
+   "Demo build — every account and post here is invented" and `noindex`.
+4. **No real-user capability** — worker settings list the four flags as
+   plain_text bindings; the deployed bundle was built from the `wrangler.jsonc`
+   whose vars are all exactly `"false"`, and the demo banner is present, which
+   per `INV-DEMO-1` cannot happen with any production flag on.
+5. **No unrelated resources** — the deploy is `wrangler deploy` scoped to the
+   `qui-demo` script in `wrangler.jsonc`; only `qui-demo` gained a version
+   (v3, 2026-08-19T08:39:47Z). Account zone list unchanged: `qui.social`
+   remains absent; no D1/KV/R2 bindings exist on the worker (ASSETS only).
 
 Production flags on the Worker are all the exact string `"false"`
 (`INDENOI_FEATURE_PRODUCTION_AUTH` / `LIVE_IDENTITY` / `MEDIA_UPLOADS` / `D1`),
@@ -72,7 +94,8 @@ confirmed live on 2026-08-17 against `/me` and the demo banner.
 - `AGENTS.md` still carries the old blanket deploy ban (host-protected write);
   ADR-0015 (LOCKED) is the operative policy
 - Cities <15k not in the world dump (seed towns still searchable)
-- `apps/web` `deploy` script runs `opennextjs-cloudflare deploy` only — a clean
-  checkout has no `.open-next` bundle, so deploy-from-clean fails. The 2026-08-19
-  redeploy had to run `build:opennext` then `deploy` explicitly. Fix (build &&
-  deploy, per Cloudflare framework guide) follows as its own change.
+- `apps/web` `deploy` script ran `opennextjs-cloudflare deploy` only — a clean
+  checkout has no `.open-next` bundle, so deploy-from-clean failed during the
+  2026-08-19 redeploy and the owner ran `build:opennext` then `deploy`
+  explicitly. Fixed in PR #33 (build && deploy, per the Cloudflare framework
+  guide, with a guard test pinning the ordering).
