@@ -5,15 +5,16 @@ real numbers, and states plainly what has not. It is meant to be re-run and
 updated, not trusted indefinitely.
 
 Recorded: **2026-08-16**, on Linux, Node >= 22.12, pnpm 10.33, vitest 3.2.7.
+Updated: **2026-08-19** (counts re-run on `0692bc1`; live-deploy correction).
 
 ## Unit and integration suite — PASSING
 
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  13 passed (13)
-     Tests  159 passed (159)
-  Duration  ~4.1s
+Test Files  16 passed (16)
+     Tests  177 passed (177)
+  Duration  ~4s
 ```
 
 | Project | File | Tests |
@@ -25,12 +26,15 @@ Test Files  13 passed (13)
 | core | `test/features.test.ts` | 4 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/demo-data.test.ts` | 9 |
-| db | `test/onboarding.test.ts` | 7 |
+| db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
-| geo | `test/gazetteer.test.ts` | 11 |
+| geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
-| web | `test/api.test.ts` | 11 |
-| web | `test/ui.test.ts` | 11 |
+| web | `test/api.test.ts` | 12 |
+| web | `test/ui.test.ts` | 12 |
+| web | `test/landing-hero.test.ts` | 6 |
+| web | `test/search-sequence.test.ts` | 5 |
+| web | `test/deploy-script.test.ts` | 1 |
 
 ## Safety gate — PASSING
 
@@ -57,7 +61,7 @@ not evidence that it tests anything.
 
 ## End-to-end suite — PASSING
 
-`e2e/mobile-smoke.spec.ts` contains **15 Playwright tests** on a Pixel 7
+`e2e/mobile-smoke.spec.ts` contains **16 Playwright tests** on a Pixel 7
 viewport, serial, against the production build (`next start`), covering: the
 demo banner on every screen, age-baseline refusal, onboarding into Discover,
 thumb-reachable tab bar, appreciation and score breakdown, unconditional city
@@ -65,6 +69,13 @@ switching, refusal of local publishing without a tie, signal-gated contact,
 evidence-not-score profiles, report and block, the insights view, the persona
 switcher, a minor's absence from adult people discovery, keyboard skip-link /
 tab navigation, and `prefers-reduced-motion` honoured in CSS.
+
+`e2e/city-search.spec.ts` adds **5 regression tests** for the city-selection
+defect (#30, fixed in #31): stale selection cleared on edit, a slow older
+search never overwriting newer results, clearing not undone by a late
+response, no reopening after selection, and switcher persistence across
+reload. The races are made deterministic by holding specific HTTP responses at
+the network layer. Total e2e: **21 tests**.
 
 Recorded local runs:
 
@@ -79,6 +90,16 @@ Hardening branch local verification (2026-08-17):
 pnpm test          → 160 passed
 pnpm e2e           → 15 passed (21.0s)
 pnpm verify:opennext → OpenNext build OK; workerd preview GET /welcome 200 with demo banner
+```
+
+Post-#31 verification (2026-08-19):
+
+```
+pnpm test          → 177 passed (16 files)
+CI (main 615f8a3)  → lint/typecheck/test, safety invariants, mobile smoke all green
+live demo          → 5/5 city-search regressions pass against
+                     https://qui-demo.petrantonft.workers.dev (they fail on
+                     pre-#31 behavior by construction)
 ```
 
 
@@ -119,9 +140,11 @@ Adversarial product / safety / operator review of main SHA
 
 Stated so nobody infers coverage from the numbers above:
 
-- **No build has ever been deployed.** `opennextjs-cloudflare build` runs
-  locally; `deploy` has never been executed and no Cloudflare account is
-  configured.
+- **Real-user production has never been deployed.** The public **synthetic
+  demo** has: `qui-demo` on Cloudflare Workers has served
+  `https://qui-demo.petrantonft.workers.dev` since 2026-08-17, currently built
+  from `615f8a3` (evidence in [AUTONOMOUS_STATE.md](AUTONOMOUS_STATE.md)).
+  All production capability flags remain exactly `"false"` on the worker.
 - **No database exists.** `packages/db/migrations/0000_init.sql` (293 lines,
   SQLite/D1) is generated and checked, but has never been applied. Every test
   above runs against the in-memory repository.
