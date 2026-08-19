@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { api } from '../lib/client';
+import { createSearchSequence } from '../lib/search-sequence';
 
 interface CityResult {
   readonly id: string;
@@ -27,21 +28,29 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
   const [results, setResults] = useState<readonly CityResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const searchSeq = useRef(createSearchSequence());
 
   async function search(value: string): Promise<void> {
     setQuery(value);
+    setError(null);
     if (value.trim().length === 0) {
+      searchSeq.current.cancel();
       setResults([]);
       return;
     }
+    const token = searchSeq.current.begin();
     const result = await api.get<{ cities: CityResult[] }>(
       `/api/cities?q=${encodeURIComponent(value)}`,
     );
+    // A slow answer to an older query must not overwrite the results for the
+    // text that is actually on screen.
+    if (!searchSeq.current.isCurrent(token)) return;
     if (result.ok) setResults(result.value.cities);
     else setError(result.message);
   }
 
   async function choose(id: string): Promise<void> {
+    searchSeq.current.cancel();
     setBusy(true);
     const result = await api.post('/api/active-city', { geoScopeId: id });
     setBusy(false);
@@ -64,7 +73,12 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
           type="button"
           className="btn btn--small btn--ghost spacer"
           aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => {
+            // Closing the panel ends the search: a response still in flight
+            // must not repopulate a list nobody is looking at.
+            if (open) searchSeq.current.cancel();
+            setOpen(!open);
+          }}
         >
           {open ? 'Close' : 'Change city'}
         </button>

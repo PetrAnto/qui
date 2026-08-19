@@ -1,13 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { GeoAttachmentKind } from '@indenoi/core';
 
 import { api } from '../lib/client';
 import { ATTACHMENT_LABELS } from '../lib/format';
 import { ONBOARDING_KINDS } from '../lib/kinds';
+import { createSearchSequence } from '../lib/search-sequence';
 
 interface CityOption {
   readonly id: string;
@@ -53,6 +54,7 @@ export function Onboarding() {
   const [interests, setInterests] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const searchSeq = useRef(createSearchSequence());
 
   const ageNumber = Number.parseInt(age, 10);
   const ageLooksUsable = Number.isFinite(ageNumber) && ageNumber > 0 && ageNumber < 120;
@@ -141,13 +143,22 @@ export function Onboarding() {
               onChange={(event) => {
                 const value = event.target.value;
                 setQuery(value);
+                // Editing the text after choosing un-chooses it: what Continue
+                // submits must always be what is visibly selected, not a city
+                // the query used to name.
+                setCity((current) => (current !== null && value !== current.name ? null : current));
                 if (value.trim().length === 0) {
+                  searchSeq.current.cancel();
                   setResults([]);
                   return;
                 }
+                const token = searchSeq.current.begin();
                 void api
                   .get<{ cities: CityResult[] }>(`/api/cities?q=${encodeURIComponent(value)}`)
                   .then((result) => {
+                    // A slow answer to an older query must not overwrite the
+                    // results for the text that is actually on screen.
+                    if (!searchSeq.current.isCurrent(token)) return;
                     if (result.ok) setResults(result.value.cities);
                   });
               }}
@@ -167,6 +178,9 @@ export function Onboarding() {
                 type="button"
                 className="result"
                 onClick={() => {
+                  // Choosing is the end of the search: a response still in
+                  // flight must not reopen the list it came from.
+                  searchSeq.current.cancel();
                   setCity(hit);
                   setQuery(`${hit.name}`);
                   setResults([]);
