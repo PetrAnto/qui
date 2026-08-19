@@ -21,8 +21,13 @@ export const people = sqliteTable(
     handle: text('handle').notNull(),
     displayName: text('display_name').notNull(),
     bio: text('bio').notNull().default(''),
+    avatarId: text('avatar_id').notNull().default(''),
     avatarSeed: text('avatar_seed').notNull(),
     avatarMotif: text('avatar_motif').notNull(),
+    avatarAlt: text('avatar_alt').notNull().default(''),
+    avatarMetadataStripped: integer('avatar_metadata_stripped', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     /** 'minor_15_17' | 'adult_18_plus'. Never a date. */
     ageBand: text('age_band').notNull(),
     accountState: text('account_state').notNull().default('active'),
