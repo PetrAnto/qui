@@ -1,7 +1,30 @@
 # ADR-0011 — Persistence boundary
 
-**Status: DEFERRED** for the database. **LOCKED** for the repository interface
-and for the rule that persistence cannot change a policy outcome.
+**Status: BASELINE** for the database implementation (amended 2026-08-19, see
+below). **LOCKED** for the repository interface and for the rule that
+persistence cannot change a policy outcome.
+
+## Amendment 2026-08-19 — implementation proceeds, enablement does not
+
+Product-owner direction (autonomous mission, 2026-08-19) prioritised the
+persistence/D1 delta. What changes: the D1/Drizzle adapter
+(`packages/db/src/d1.ts`) now **exists** and is tested against a local
+miniflare-backed D1 with the real migrations applied, including a parity suite
+that proves the store cannot change a policy outcome or leak a field a
+projection assumed absent.
+
+What does **not** change: the `persistentDatabase` flag still defaults off and
+only the exact string `'true'` enables it (`INV-DEMO-1`); the D1 binding stays
+**commented out** in `wrangler.jsonc`; provisioning a database, applying the
+migration to a hosted instance, and testing backup/restore remain human,
+account-owning decisions ([RELEASE_CHECKLIST.md](../RELEASE_CHECKLIST.md) §4).
+The deployed demo continues to run on the in-memory store.
+
+The rest of this document stands as written, except that "the implementation
+does not exist" is no longer true. The web app's store factory is deliberately
+unchanged: wiring the flag to the adapter forces a bootstrap decision
+(seed-on-empty) and a sync→async `ports()` refactor across ~49 call sites,
+and that work lands with enablement, not before it.
 
 ## Context
 
