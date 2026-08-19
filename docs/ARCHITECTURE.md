@@ -12,7 +12,9 @@ apps/web            Next.js 16 App Router — UI and route handlers only
   lib/              session, cookies, features, presentation helpers
 packages/core       pure domain: types, policy, ranking, services, projections
 packages/db         repository implementations + Drizzle schema + demo seed
-packages/geo        the gazetteer dataset (34 cities, 6 countries)
+packages/geo        the gazetteer dataset (34 curated seed cities + a worldwide
+                    GeoNames index of 34,099 cities; activation is a lookup, not
+                    a code change)
 ```
 
 The dependency direction is one-way: `web → core`, `web → db`, `db → core`,
@@ -63,8 +65,12 @@ function, not a trust tier. Hosts are not moderators
 
 ## Geography is a dataset
 
-`packages/geo/src/gazetteer.ts` is 6 countries, 17 regions and 34 cities as
-data. Nothing in the application branches on which row it is; the active city
+`packages/geo/src/gazetteer.ts` holds the hand-curated seed — 6 countries, 17
+regions and 34 cities used by the demo cast — and `world.ts` adds a worldwide
+search index built from the GeoNames `cities15000` dump (34,099 rows, CC BY
+4.0). Search and activation run over both; a city becomes a `GeoScope` when it
+is looked up, never through a privileged code path. Nothing in the application
+branches on which row it is; the active city
 is a cookie so every surface agrees on where "here" is without threading it
 through every link. Provenance and licensing:
 [geo/PROVENANCE.md](geo/PROVENANCE.md).
