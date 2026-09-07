@@ -45,4 +45,14 @@ describe('createSearchSequence', () => {
     const b = sequence.begin();
     expect(b).toBeGreaterThan(a);
   });
+
+  it('repeated cancel() is idempotent and a search after it still wins', () => {
+    const sequence = createSearchSequence();
+    const pending = sequence.begin();
+    sequence.cancel();
+    sequence.cancel();
+    expect(sequence.isCurrent(pending)).toBe(false);
+    const next = sequence.begin();
+    expect(sequence.isCurrent(next)).toBe(true);
+  });
 });
