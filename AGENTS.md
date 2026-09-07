@@ -12,9 +12,47 @@ Every decision in this repo carries one of these words. Use them exactly.
 |---|---|
 | **LOCKED** | Cannot change without a new ADR that supersedes the old one *and* a recorded product-owner decision. Changing the code without changing the ADR is a defect. |
 | **BASELINE** | A deliberate current position that is expected to be revisited (typically per jurisdiction or per launch city). Changing it is a normal ADR amendment. |
+| **HYPOTHESIS** | A product or implementation idea worth testing that is not settled truth. Do not silently promote it to a requirement. |
 | **OPEN** | Not decided. Do not implement a default and call it a decision. |
 | **DEFERRED** | Decided *not now*. The shape exists; the implementation does not. |
+| **REJECTED** | Explicitly rejected as the current product/implementation direction. Do not reintroduce it without a recorded owner decision. |
 | **OUT OF SCOPE** | Decided *never, in this product surface*. Not a backlog item. |
+
+## Canonical product, brand and UX documents
+
+Before changing product behavior, visual design, landing-page messaging or core
+application UX, read these four files:
+
+1. [docs/canon/01_BRAND_SYSTEM.md](docs/canon/01_BRAND_SYSTEM.md)
+2. [docs/canon/02_PRODUCT_DOCTRINE.md](docs/canon/02_PRODUCT_DOCTRINE.md)
+3. [docs/canon/03_LANDING_PAGE_SPEC.md](docs/canon/03_LANDING_PAGE_SPEC.md)
+4. [docs/canon/04_APPLICATION_UX_SYSTEM.md](docs/canon/04_APPLICATION_UX_SYSTEM.md)
+
+They record the latest owner-approved product/brand direction, including
+**REAL · EQUAL · ACTIVE · LOCAL**, the light product design system, the darker
+cinematic landing-page mode, equal structural standing, worldwide city
+exploration, Discover → Signals → action, and the open-source/build-in-public
+execution constraint.
+
+### Precedence and conflict rule
+
+- **Safety invariants remain binding.** Nothing in the product/brand canon may
+  silently weaken an `INV-*` rule, privacy boundary or security constraint.
+- For **brand, product doctrine, landing-page narrative and application UX**,
+  `docs/canon/*` is newer than older prose in `docs/PRODUCT.md`,
+  `docs/NON_GOALS.md`, `docs/EXPERIMENTS.md` and historical context. Where the
+  older prose conflicts only on those product/UX topics, use the newer canon.
+- Accepted ADRs remain the source of truth for explicit architectural and
+  safety decisions. If an ADR or executable invariant conflicts with the newer
+  product canon, **stop and surface the conflict**. Do not guess which side to
+  weaken; reconciliation requires an owner decision and, when appropriate, a
+  superseding ADR.
+- Historical `DEFERRED` / `OUT OF SCOPE` decisions remain meaningful. The newer
+  `HYPOTHESIS` / `REJECTED` terms do not silently rewrite old ADR history.
+- GitHub is the public source of truth for non-sensitive development history.
+  Build in public does not mean publishing secrets, real private user data,
+  active vulnerability details or abuse-detection information that would make
+  attacks materially easier.
 
 ## Non-negotiables
 
@@ -76,5 +114,3 @@ stated limitation, not a bug to work around with a hidden cache.
 The demo banner reads `IS_DEMO_BUILD`. If you enable a production flag, the
 banner must stop showing — a build that has real auth and still says "demo" is
 lying to its users.
-</content>
-</invoke>
