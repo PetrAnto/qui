@@ -37,6 +37,24 @@ interface HeldRequest {
 }
 
 /**
+ * Await a signal with a labelled bound, so a missing request fails the test
+ * with the query that never fired instead of an opaque global timeout.
+ */
+async function bounded(signal: Promise<void>, label: string): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      signal,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timed out waiting for ${label}`)), 10_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Pause the /api/cities response for exactly one query string. Every other
  * query passes through untouched. This is how the test controls which response
  * arrives last, instead of hoping latency cooperates.
@@ -68,6 +86,16 @@ function cityResponse(page: Page, query: string): Promise<unknown> {
       response.url().includes('/api/cities') &&
       new URL(response.url()).searchParams.get('q') === query,
   );
+}
+
+/**
+ * Assert a stale response did not land. The wait after release is not a bare
+ * sleep: `networkidle` only resolves once the released response (and any
+ * render work it could trigger) has finished, so the assertion that follows
+ * cannot outrun a stale state update.
+ */
+async function expectQuiet(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -103,7 +131,7 @@ test('a slow older search never overwrites newer results in onboarding', async (
   const stale = await holdCityQuery(page, 'aj');
 
   await city.fill('aj');
-  await stale.held;
+  await bounded(stale.held, 'held /api/cities?q=aj');
 
   await city.fill('tokyo');
   const results = page.locator(RESULTS);
@@ -112,8 +140,7 @@ test('a slow older search never overwrites newer results in onboarding', async (
   const staleResponse = cityResponse(page, 'aj');
   stale.release();
   await staleResponse;
-  // Let any (buggy) stale state update flush before asserting it did not land.
-  await page.waitForTimeout(150);
+  await expectQuiet(page);
   await expect(results.getByRole('button', { name: /Ajaccio/ })).toHaveCount(0);
   await expect(results.getByRole('button', { name: /Tokyo/ }).first()).toBeVisible();
 });
@@ -124,7 +151,7 @@ test('clearing the field cannot be undone by a late response', async ({ page }) 
   const stale = await holdCityQuery(page, 'aj');
 
   await city.fill('aj');
-  await stale.held;
+  await bounded(stale.held, 'held /api/cities?q=aj');
 
   await city.fill('');
   await expect(page.locator(RESULTS).getByRole('button')).toHaveCount(0);
@@ -132,7 +159,7 @@ test('clearing the field cannot be undone by a late response', async ({ page }) 
   const staleResponse = cityResponse(page, 'aj');
   stale.release();
   await staleResponse;
-  await page.waitForTimeout(150);
+  await expectQuiet(page);
   await expect(page.locator(RESULTS).getByRole('button')).toHaveCount(0);
 });
 
@@ -150,7 +177,7 @@ test('choosing a result while a search is in flight does not reopen the list', a
 
   // Start a newer search, hold it, and pick from the still-visible results.
   await city.fill('par');
-  await stale.held;
+  await bounded(stale.held, 'held /api/cities?q=par');
   await paris.click();
   await expect(page.getByText(/Selected: Paris/)).toBeVisible();
   await expect(results.getByRole('button')).toHaveCount(0);
@@ -158,7 +185,7 @@ test('choosing a result while a search is in flight does not reopen the list', a
   const staleResponse = cityResponse(page, 'par');
   stale.release();
   await staleResponse;
-  await page.waitForTimeout(150);
+  await expectQuiet(page);
   await expect(results.getByRole('button')).toHaveCount(0);
   await expect(page.getByText(/Selected: Paris/)).toBeVisible();
 });
@@ -172,7 +199,7 @@ test('the city switcher applies only the latest search and persists across reloa
 
   const stale = await holdCityQuery(page, 'aj');
   await input.fill('aj');
-  await stale.held;
+  await bounded(stale.held, 'held /api/cities?q=aj');
 
   await input.fill('kilrush');
   const results = page.locator(RESULTS);
@@ -181,7 +208,7 @@ test('the city switcher applies only the latest search and persists across reloa
   const staleResponse = cityResponse(page, 'aj');
   stale.release();
   await staleResponse;
-  await page.waitForTimeout(150);
+  await expectQuiet(page);
   await expect(results.getByRole('button', { name: /Ajaccio/ })).toHaveCount(0);
   await expect(results.getByRole('button', { name: /Kilrush/ })).toBeVisible();
 
