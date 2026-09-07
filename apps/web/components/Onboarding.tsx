@@ -143,10 +143,12 @@ export function Onboarding() {
               onChange={(event) => {
                 const value = event.target.value;
                 setQuery(value);
-                // Editing the text after choosing un-chooses it: what Continue
-                // submits must always be what is visibly selected, not a city
-                // the query used to name.
-                setCity((current) => (current !== null && value !== current.name ? null : current));
+                // Typing is editing, always: what Continue submits must be the
+                // city whose result row is chosen after the last keystroke,
+                // never one the query used to name. Comparing strings would
+                // let delete-and-retype-the-same-name keep a stale id.
+                setCity(null);
+                setError(null);
                 if (value.trim().length === 0) {
                   searchSeq.current.cancel();
                   setResults([]);
@@ -160,17 +162,18 @@ export function Onboarding() {
                     // results for the text that is actually on screen.
                     if (!searchSeq.current.isCurrent(token)) return;
                     if (result.ok) setResults(result.value.cities);
+                    else setError(result.message);
                   });
               }}
             />
           </label>
-          {city !== null ? (
-            <p className="muted">
-              Selected: {city.name} · {city.countryCode}
-            </p>
-          ) : (
-            <p className="faint">Type at least a few letters. Any city on earth is fair game.</p>
-          )}
+          {error !== null ? <p className="notice notice--warn">{error}</p> : null}
+          {/* aria-live so choosing — and un-choosing on edit — is announced. */}
+          <p className={city !== null ? 'muted' : 'faint'} aria-live="polite">
+            {city !== null
+              ? `Selected: ${city.name} · ${city.countryCode}`
+              : 'Type at least a few letters. Any city on earth is fair game.'}
+          </p>
           <div className="searchresults">
             {results.map((hit) => (
               <button
@@ -182,7 +185,7 @@ export function Onboarding() {
                   // flight must not reopen the list it came from.
                   searchSeq.current.cancel();
                   setCity(hit);
-                  setQuery(`${hit.name}`);
+                  setQuery(hit.name);
                   setResults([]);
                 }}
               >
@@ -213,7 +216,16 @@ export function Onboarding() {
           >
             Continue
           </button>
-          <button type="button" className="btn btn--ghost btn--block" onClick={() => setStep('age')}>
+          <button
+            type="button"
+            className="btn btn--ghost btn--block"
+            onClick={() => {
+              // Leaving the step ends the search: a response in flight must
+              // not land on a step nobody is looking at.
+              searchSeq.current.cancel();
+              setStep('age');
+            }}
+          >
             Back
           </button>
         </div>
