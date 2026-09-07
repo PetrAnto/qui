@@ -5,11 +5,15 @@ import { Miniflare } from 'miniflare';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  acceptInvite,
   addCity,
   blockUser,
+  createInvite,
   createSignal,
+  createVouch,
   decideResponse,
   getThreadView,
+  reportContent,
   respondToSignal,
   sendMessage,
   toPublicProfile,
@@ -411,4 +415,143 @@ describe('store parity: safety surfaces', () => {
     }
   });
 });
+
+describe('store parity: moderation, community, observability', () => {
+  it('a report opens a case identically, and a second report joins it', async () => {
+    // Hugo reports Léa's post; Paul reports the same post. The second report
+    // must join the existing case in both stores — and reportIds, which D1
+    // derives from the reports table while the in-memory store keeps it on the
+    // case object, must agree exactly.
+    const first = await reportContent(d1Ports(), {
+      reporterId: DEMO_USERS.hugo,
+      targetType: 'post',
+      targetId: (await d1.listPosts())[0]?.id ?? '',
+      reason: 'spam',
+      note: 'Smells like a copy-paste.',
+    });
+    const firstMem = await reportContent(memPorts(), {
+      reporterId: DEMO_USERS.hugo,
+      targetType: 'post',
+      targetId: (await mem.listPosts())[0]?.id ?? '',
+      reason: 'spam',
+      note: 'Smells like a copy-paste.',
+    });
+    expect(first).toEqual(firstMem);
+    expect(first.ok).toBe(true);
+    if (!first.ok || !firstMem.ok) throw new Error('report failed');
+
+    const second = await reportContent(d1Ports(), {
+      reporterId: DEMO_USERS.paul,
+      targetType: 'post',
+      targetId: (await d1.listPosts())[0]?.id ?? '',
+      reason: 'harassment',
+    });
+    const secondMem = await reportContent(memPorts(), {
+      reporterId: DEMO_USERS.paul,
+      targetType: 'post',
+      targetId: (await mem.listPosts())[0]?.id ?? '',
+      reason: 'harassment',
+    });
+    expect(second).toEqual(secondMem);
+    expect(second.ok && second.value.caseId === first.value.caseId).toBe(true);
+
+    expect(await d1.listReports()).toEqual(await mem.listReports());
+    const casesD1 = await d1.listModerationCases();
+    const casesMem = await mem.listModerationCases();
+    expect(casesD1).toEqual(casesMem);
+    const openCase = casesD1.find((entry) => entry.id === first.value.caseId);
+    expect(openCase?.reportIds).toHaveLength(2);
+  });
+
+  it('moderation case triage labels round-trip commas intact', async () => {
+    // A label may itself contain a comma; the store must not split on one.
+    const moderationCase = {
+      id: 'case-parity-labels',
+      targetType: 'post' as const,
+      targetId: 'post-x',
+      state: 'triaged' as const,
+      reportIds: [],
+      triageLabels: ['spam, bulk', 'repeat-offender'],
+      createdAt: DEMO_NOW,
+    };
+    await d1.putModerationCase(moderationCase);
+    await mem.putModerationCase(moderationCase);
+    const readD1 = (await d1.listModerationCases()).find((entry) => entry.id === moderationCase.id);
+    const readMem = (await mem.listModerationCases()).find((entry) => entry.id === moderationCase.id);
+    expect(readD1).toEqual(readMem);
+    expect(readD1?.triageLabels).toEqual(['spam, bulk', 'repeat-offender']);
+  });
+
+  it('invites issue and accept identically', async () => {
+    const issued = await createInvite(d1Ports(), {
+      actorId: DEMO_USERS.lea,
+      geoScopeId: CITY_IDS.ajaccio,
+    });
+    const issuedMem = await createInvite(memPorts(), {
+      actorId: DEMO_USERS.lea,
+      geoScopeId: CITY_IDS.ajaccio,
+    });
+    expect(issued).toEqual(issuedMem);
+    if (!issued.ok) throw new Error('invite failed');
+
+    const accepted = await acceptInvite(d1Ports(), {
+      actorId: DEMO_USERS.hugo,
+      code: issued.value.code,
+    });
+    const acceptedMem = await acceptInvite(memPorts(), {
+      actorId: DEMO_USERS.hugo,
+      code: issued.value.code,
+    });
+    expect(accepted).toEqual(acceptedMem);
+    expect(await d1.listInvites()).toEqual(await mem.listInvites());
+  });
+
+  it('a vouch writes once and a duplicate is a conflict in both stores', async () => {
+    // Léa already vouches Hugo in the demo seed, so she vouches Inès instead.
+    const vouch = await createVouch(d1Ports(), {
+      actorId: DEMO_USERS.lea,
+      subjectId: DEMO_USERS.ines,
+      geoScopeId: CITY_IDS.ajaccio,
+      statement: 'Fixed my derailleur and would not take money.',
+    });
+    const vouchMem = await createVouch(memPorts(), {
+      actorId: DEMO_USERS.lea,
+      subjectId: DEMO_USERS.ines,
+      geoScopeId: CITY_IDS.ajaccio,
+      statement: 'Fixed my derailleur and would not take money.',
+    });
+    expect(vouch).toEqual(vouchMem);
+    expect(vouch.ok).toBe(true);
+
+    const again = await createVouch(d1Ports(), {
+      actorId: DEMO_USERS.lea,
+      subjectId: DEMO_USERS.ines,
+      geoScopeId: CITY_IDS.ajaccio,
+      statement: 'Again.',
+    });
+    const againMem = await createVouch(memPorts(), {
+      actorId: DEMO_USERS.lea,
+      subjectId: DEMO_USERS.ines,
+      geoScopeId: CITY_IDS.ajaccio,
+      statement: 'Again.',
+    });
+    expect(again).toEqual(againMem);
+    expect(again).toEqual({ ok: false, reason: 'conflict' });
+    expect(await d1.listVouches()).toEqual(await mem.listVouches());
+  });
+
+  it('audit and analytics logs accumulate identically', async () => {
+    // Everything above already wrote to both logs through the services; the
+    // full tails must match, not just the counts.
+    const auditD1 = await d1.listAudit();
+    const auditMem = await mem.listAudit();
+    expect(auditD1.length).toBeGreaterThan(0);
+    expect(auditD1).toEqual(auditMem);
+    const analyticsD1 = await d1.listAnalytics();
+    const analyticsMem = await mem.listAnalytics();
+    expect(analyticsD1.length).toBeGreaterThan(0);
+    expect(analyticsD1).toEqual(analyticsMem);
+  });
+});
+
 

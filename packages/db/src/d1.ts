@@ -329,7 +329,10 @@ function caseFromRow(
     targetId: row.targetId,
     state: row.state as ModerationCase['state'],
     reportIds,
-    triageLabels: row.triageLabels === '' ? [] : row.triageLabels.split(','),
+    // JSON, not comma-joining: a label may itself contain a comma, and the
+    // in-memory store keeps the array exactly. '' is the column default for
+    // rows that never had labels written.
+    triageLabels: row.triageLabels === '' ? [] : (JSON.parse(row.triageLabels) as string[]),
     createdAt: row.createdAt,
   };
 }
@@ -775,7 +778,7 @@ export function createD1Repository(database: D1Database): Repository {
         targetType: moderationCase.targetType,
         targetId: moderationCase.targetId,
         state: moderationCase.state,
-        triageLabels: moderationCase.triageLabels.join(','),
+        triageLabels: JSON.stringify(moderationCase.triageLabels),
         createdAt: moderationCase.createdAt,
       };
       await db
