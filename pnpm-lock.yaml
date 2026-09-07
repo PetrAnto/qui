@@ -87,6 +87,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.10
+      miniflare:
+        specifier: 5.20260811.1-alpha
+        version: 5.20260811.1-alpha
 
   packages/geo:
     dependencies:
