@@ -154,6 +154,26 @@ describe('store parity: people and evidence', () => {
     expect(await d1.getPerson(DEMO_USERS.hugo)).toEqual(await mem.getPerson(DEMO_USERS.hugo));
   });
 
+  it('duplicate facet values cannot crash one store and not the other', async () => {
+    // profile_tags has a composite PK on (userId, kind, value); a repeated
+    // value is a constraint violation in D1 but a silent no-op in the Map.
+    // The contract is behavioral: neither store may throw, and the duplicated
+    // value is present and queryable in both. (The in-memory store keeps the
+    // duplicate verbatim; D1 dedupes on the natural key. Exact array equality
+    // on redundant input is not the contract — surviving it identically is.)
+    const hugo = await mem.getPerson(DEMO_USERS.hugo);
+    if (hugo === null) throw new Error('missing demo person');
+    const duped = { ...hugo, id: 'usr-parity-dup', handle: 'parity-dup', practices: ['freediving', 'freediving'] };
+    await d1.putPerson(duped);
+    await mem.putPerson(duped);
+    const fromD1 = await d1.getPerson('usr-parity-dup');
+    const fromMem = await mem.getPerson('usr-parity-dup');
+    expect(fromD1).not.toBeNull();
+    expect(fromMem).not.toBeNull();
+    expect(fromD1?.practices).toContain('freediving');
+    expect(fromMem?.practices).toContain('freediving');
+  });
+
   it('evidence bundles match, including after a new attestation', async () => {
     const attestation = {
       id: 'att-parity-1',
@@ -344,6 +364,30 @@ describe('store parity: the product loop produces identical state', () => {
     expect(await d1.listSignals()).toEqual(await mem.listSignals());
     expect(await d1.listResponses()).toEqual(await mem.listResponses());
     expect(await d1.listParticipants()).toEqual(await mem.listParticipants());
+  });
+
+  it('message ordering sorts on createdAt, not insertion order, in both stores', async () => {
+    // Every other message in this file is written under the fixed DEMO_NOW
+    // clock, which only ever exercises the id tie-breaker — never the
+    // createdAt primary sort. Write two messages whose insertion order and
+    // timestamp order disagree and assert both stores sort on time.
+    const [threads] = [await mem.listThreads()];
+    const thread = threads[0];
+    if (thread === undefined) throw new Error('no thread to order');
+    const author = thread.participantIds[0];
+    if (author === undefined) throw new Error('thread has no participant');
+    const earlier = { id: 'msg-parity-early', threadId: thread.id, authorId: author, body: 'first by time', createdAt: '2026-01-01T08:00:00.000Z' };
+    const later = { id: 'msg-parity-late', threadId: thread.id, authorId: author, body: 'second by time', createdAt: '2026-01-01T09:00:00.000Z' };
+    // Insert later first: if either store trusted insertion order, the read
+    // would come back reversed.
+    await d1.putMessage(later);
+    await mem.putMessage(later);
+    await d1.putMessage(earlier);
+    await mem.putMessage(earlier);
+    const orderD1 = (await d1.listMessages(thread.id)).map((m) => m.id);
+    const orderMem = (await mem.listMessages(thread.id)).map((m) => m.id);
+    expect(orderD1).toEqual(orderMem);
+    expect(orderD1.indexOf('msg-parity-early')).toBeLessThan(orderD1.indexOf('msg-parity-late'));
   });
 });
 

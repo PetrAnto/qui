@@ -387,17 +387,23 @@ export function createD1Repository(database: D1Database): Repository {
   ): Promise<Map<string, (typeof s.profileTags.$inferSelect)[]>> {
     const byUser = new Map<string, (typeof s.profileTags.$inferSelect)[]>();
     if (userIds.length === 0) return byUser;
-    const rows = await db
-      .select()
-      .from(s.profileTags)
-      .where(inArray(s.profileTags.userId, [...userIds]))
-      // Insertion order, not the composite PK's alphabetical order: a person's
-      // facet lists are ordered data ("freediving" first means something).
-      .orderBy(INSERTION);
-    for (const row of rows) {
-      const list = byUser.get(row.userId) ?? [];
-      list.push(row);
-      byUser.set(row.userId, list);
+    // The id list is itself a bound-parameter list, so it is chunked against
+    // the same D1 limit as the row inserts (chunkRows) — past 100 people an
+    // unchunked IN() throws where the in-memory store returns fine.
+    for (let index = 0; index < userIds.length; index += D1_MAX_BOUND_PARAMETERS) {
+      const slice = userIds.slice(index, index + D1_MAX_BOUND_PARAMETERS);
+      const rows = await db
+        .select()
+        .from(s.profileTags)
+        .where(inArray(s.profileTags.userId, [...slice]))
+        // Insertion order, not the composite PK's alphabetical order: a person's
+        // facet lists are ordered data ("freediving" first means something).
+        .orderBy(INSERTION);
+      for (const row of rows) {
+        const list = byUser.get(row.userId) ?? [];
+        list.push(row);
+        byUser.set(row.userId, list);
+      }
     }
     return byUser;
   }
@@ -426,7 +432,10 @@ export function createD1Repository(database: D1Database): Repository {
     putPerson: async (person) => {
       const row = personRow(person);
       const tagRows = FACET_KINDS.flatMap(([facet, kind]) =>
-        person[facet].map((value) => ({ userId: person.id, kind, value })),
+        // Dedupe, preserving first-occurrence order: the composite PK is
+        // (userId, kind, value), so a repeated facet value round-trips in the
+        // in-memory Map but is a constraint violation here mid-batch.
+        [...new Set(person[facet])].map((value) => ({ userId: person.id, kind, value })),
       );
       // One atomic batch: the row upsert, the wholesale facet replacement
       // (delete + chunked inserts), all or nothing. The in-memory store is
