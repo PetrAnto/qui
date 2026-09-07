@@ -12,7 +12,10 @@
 - GitHub: **https://github.com/PetrAnto/qui** (**public**)
 - Previous name `PetrAnto/indenoi` redirects
 - Local directory was **not** renamed
-- **origin/main SHA:** `615f8a3714abde7cccb03bd91b9890e4f376b5de`
+- **origin/main SHA:** `e5ca5c14f5bcaf21219895492444ab5d46b2600a`
+- **Deployed source SHA:** `615f8a3714abde7cccb03bd91b9890e4f376b5de` (zero
+  app-code drift vs main — intervening commits are docs, the deploy script and
+  tests only)
 
 ## Landed this tranche
 
@@ -59,11 +62,15 @@ Five-point deployment verification (2026-08-19T09:00Z):
 1. **Source SHA** — GitHub `main` is exactly
    `615f8a3714abde7cccb03bd91b9890e4f376b5de`; the owner deployed from a clean
    detached worktree of that SHA.
-2. **BUILD_ID** — live serves `_DmrsNtvDU4UUV7Y6VqsZ`, distinct from the
-   `d0043f6` deploy's `KAxqnTcx2ljKucuyQXAIS`. Next.js BUILD_ID is a per-build
-   random hash, so equality with a local rebuild is not the test; the changed
-   id plus the live regression pass (above) is the evidence the serving bundle
-   is the #31-fixed tree.
+2. **BUILD_ID — VERIFIED by exact match.** The owner rebuilt from a clean
+   detached worktree of `615f8a3…` and compared:
+   `SOURCE_SHA=615f8a3714abde7cccb03bd91b9890e4f376b5de`,
+   `LOCAL_BUILD_ID=_DmrsNtvDU4UUV7Y6VqsZ`, `REMOTE_BUILD_ID=_DmrsNtvDU4UUV7Y6VqsZ`
+   — identical. Corroborated by the 5/5 live regression pass (above), which
+   fails on pre-#31 behavior by construction. (Earlier wording here said
+   BUILD_ID equality was not a usable test because the id is generated per
+   build; the owner's clean-worktree rebuild produced the same id, so the
+   match is direct evidence.)
 3. **Honest demo identity** — `/welcome` responds 200 with
    "Demo build — every account and post here is invented" and `noindex`.
 4. **No real-user capability** — worker settings list the four flags as
