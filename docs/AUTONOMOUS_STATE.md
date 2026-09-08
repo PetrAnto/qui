@@ -4,7 +4,7 @@
 
 ## Timestamp
 
-- 2026-09-07T16:50:00Z
+- 2026-09-08T07:00:00Z
 
 ## Repository
 
@@ -12,10 +12,14 @@
 - GitHub: **https://github.com/PetrAnto/qui** (**public**)
 - Previous name `PetrAnto/indenoi` redirects
 - Local directory was **not** renamed
-- **origin/main SHA:** `d8b8bf542ffcd5f43d1c09706d3a7b70dbbd948a`
-- **Deployed source SHA:** `615f8a3714abde7cccb03bd91b9890e4f376b5de` (zero
-  app-code drift vs main — intervening commits are docs, the deploy script,
-  tests and the D1 adapter, none of which the in-memory demo serves)
+- **State reconciled through:** PR #42. Query GitHub live for the current
+  `main` SHA; this file intentionally does not self-assert the SHA produced by
+  its own merge.
+- **Deployed source SHA:** `615f8a3714abde7cccb03bd91b9890e4f376b5de`.
+  The live synthetic demo is older than current `main`: subsequent changes
+  include application code from PR #39 (`apps/web/components/Onboarding.tsx`),
+  documentation/canon updates, tests and the D1 adapter. The demo has **not**
+  been redeployed to include those later application changes.
 
 ## Landed this tranche
 
@@ -44,8 +48,9 @@ adversarial review via the subagent channel, which is working again:
   masked. Real hardening from the same review landed: `tagsFor` IN()-list
   chunking against the D1 bound-parameter limit, facet-value dedupe in
   `putPerson`, and two new parity tests (message ordering by `createdAt` with
-  distinct clocks; duplicate-facet survival). 58 db tests green against
-  miniflare-backed D1 with the committed migrations.
+  distinct clocks; duplicate-facet survival). 58 DB-package tests are green in
+  total; 18 tests in `packages/db/test/d1.test.ts` instantiate Miniflare and
+  exercise the D1 adapter with the committed migrations.
 
 ## D1 persistence — CODE complete, flag fail-closed (ADR-0011)
 
