@@ -75,7 +75,7 @@ test('a card can be appreciated, and explains why it is in the feed', async ({ p
   await expect(heart).not.toHaveText(before ?? '');
 
   await first.getByText('Why am I seeing this?').click();
-  await expect(first.getByText('geography')).toBeVisible();
+  await expect(first.getByText('From around here')).toBeVisible();
 });
 
 test('any city can be switched to, with no permission and no evidence', async ({ page }) => {

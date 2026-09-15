@@ -33,6 +33,15 @@ export default async function PeoplePage() {
     <>
       <CityBar cityName={city.name} cityId={city.id} access={access} />
 
+      <nav className="segmented" aria-label="Discover modes">
+        <Link className="btn btn--small" href="/">
+          For you
+        </Link>
+        <Link className="btn btn--small btn--primary" href="/people" aria-current="page">
+          People
+        </Link>
+      </nav>
+
       <header className="pagehead">
         <h1>People in {city.name}</h1>
         <p className="pagehead__sub">

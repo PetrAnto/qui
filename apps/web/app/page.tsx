@@ -36,6 +36,16 @@ export default async function DiscoverPage() {
       <TrackView name="discover_impression" geoScopeId={city.id} />
       <CityBar cityName={city.name} cityId={city.id} access={access} />
 
+      {/* Only the modes with honest, distinct behavior behind them. */}
+      <nav className="segmented" aria-label="Discover modes">
+        <Link className="btn btn--small btn--primary" href="/" aria-current="page">
+          For you
+        </Link>
+        <Link className="btn btn--small" href="/people">
+          People
+        </Link>
+      </nav>
+
       <header className="pagehead">
         <h1>What people here actually do</h1>
         <p className="pagehead__sub">

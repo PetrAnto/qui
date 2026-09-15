@@ -7,7 +7,7 @@ import { useState } from 'react';
 import type { ContextualAction, PublicPost } from '@indenoi/core';
 
 import { api } from '../lib/client';
-import { relativeTime } from '../lib/format';
+import { relativeTime, whyLabel } from '../lib/format';
 import { Art } from './Art';
 import { Avatar } from './Avatar';
 import { SafetyMenu } from './SafetyMenu';
@@ -76,12 +76,15 @@ export function PostCard({
         <p>{post.caption}</p>
 
         <div className="row row--wrap">
-          {post.practice !== null ? <span className="chip">{post.practice}</span> : null}
+          {post.practice !== null ? <span className="chip chip--context">{post.practice}</span> : null}
+          {/* A heart is a thank-you, not a scoreboard: present, quiet, and
+              never the primary affordance on the card (canon 04 §3.3). */}
           <button
             type="button"
-            className={appreciated ? 'btn btn--small btn--primary' : 'btn btn--small'}
+            className={appreciated ? 'btn btn--small btn--primary' : 'btn btn--small btn--ghost'}
             onClick={() => void appreciate()}
             aria-pressed={appreciated}
+            aria-label={appreciated ? `Appreciated — ${count} in total` : `Appreciate — ${count} so far`}
           >
             ♥ {count}
           </button>
@@ -120,7 +123,7 @@ export function PostCard({
             <dl>
               {Object.entries(breakdown).map(([term, value]) => (
                 <div key={term} style={{ display: 'contents' }}>
-                  <dt>{term}</dt>
+                  <dt>{whyLabel(term)}</dt>
                   <dd>{value.toFixed(3)}</dd>
                 </div>
               ))}
