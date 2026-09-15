@@ -8,14 +8,16 @@
  * Provenance honesty (canon §2.5): the owner-supplied brand board is a visual
  * reference, not a production vector master. The symbol geometry below is an
  * interim clean-room SVG drawn only from the locked textual description —
- * ring, tail, three strokes — and nothing else. The `QUI` wordmark here is an
- * interim letterspaced text treatment, NOT the custom wordmark asset; canon
- * §4.1 forbids recreating the wordmark from the product typeface, so when the
- * owner supplies the vector master it replaces `LogoWordmark` in this one
- * file and nowhere else. Do not invent a different logo in the meantime.
+ * ring, tail, three strokes — and nothing else.
  *
- * Approved forms (canon §2.3): primary lockup, symbol, wordmark, mono-dark,
- * mono-light, and the app icon (`app/icon.svg`, kept in sync with `LogoSymbol`).
+ * The wordmark is deliberately absent: canon §4.1 LOCKs it as a custom asset
+ * that must not be recreated from the product typeface, and no vector master
+ * exists in this repository. Until the owner supplies one, surfaces use the
+ * standalone symbol (canon §2.3 form 2) and plain UI text names the product —
+ * never a styled pseudo-wordmark. Do not invent a different logo.
+ *
+ * Approved forms (canon §2.3): symbol and the app icon (`app/icon.svg`, kept
+ * in sync with `LogoSymbol`) are the forms this repo can support honestly.
  */
 
 type Mono = 'dark' | 'light';
@@ -59,13 +61,7 @@ export function LogoSymbol({ size = 28, expressive = true, mono, title }: Symbol
   );
 }
 
-export function LogoWordmark({ mono }: { readonly mono?: Mono }) {
-  return (
-    <span className={mono === 'light' ? 'logo__word logo__word--on-dark' : 'logo__word'}>QUI</span>
-  );
-}
-
-/** Primary lockup: symbol + wordmark (canon §2.3 form 1). */
+/** The only lockup this repo may ship until the wordmark master exists. */
 export function Logo({
   size = 28,
   mono,
@@ -78,7 +74,6 @@ export function Logo({
   return (
     <span className={mono === 'light' ? 'logo logo--on-dark' : 'logo'}>
       <LogoSymbol size={size} expressive={expressive} mono={mono} title="QUI" />
-      <LogoWordmark mono={mono} />
     </span>
   );
 }

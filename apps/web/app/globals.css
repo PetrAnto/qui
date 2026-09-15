@@ -675,16 +675,6 @@ main:focus {
   width: auto;
 }
 
-.logo__word {
-  font-weight: 800;
-  letter-spacing: 0.28em;
-  color: var(--color-text);
-}
-
-.logo--on-dark .logo__word,
-.logo__word--on-dark {
-  color: var(--color-on-dark);
-}
 
 
 /* ------------------------------------------------------- welcome / landing */
@@ -741,9 +731,61 @@ main:focus {
   align-items: center;
 }
 
+/* Mobile: the secondary links collapse into a compact menu (canon 03 §3),
+   never disappear. details/summary keeps it keyboard- and reader-accessible
+   without client code. */
+.lhead__menu {
+  display: none;
+  position: relative;
+}
+
+.lhead__menu summary {
+  list-style: none;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  font-weight: 650;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.lhead__menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.lhead__sheet {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  min-width: 11rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 40;
+}
+
+.lhead__sheet a {
+  padding: 0.6rem 0.7rem;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  border-radius: 0.5rem;
+}
+
 @media (max-width: 560px) {
-  .lhead__nav a:not(.btn):not(:last-of-type) {
+  .lhead__nav > a:not(.btn) {
     display: none;
+  }
+
+  .lhead__menu {
+    display: block;
   }
 }
 
