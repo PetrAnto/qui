@@ -69,7 +69,9 @@ test('a card can be appreciated, and explains why it is in the feed', async ({ p
   const first = page.locator('article.card').first();
   await expect(first).toBeVisible();
 
-  const heart = first.getByRole('button', { name: /♥/ });
+  // The control's accessible name is its aria-label (the count in words);
+  // the ♥ glyph is visible content, not the name.
+  const heart = first.getByRole('button', { name: /appreciate/i });
   const before = await heart.textContent();
   await heart.click();
   await expect(heart).not.toHaveText(before ?? '');
