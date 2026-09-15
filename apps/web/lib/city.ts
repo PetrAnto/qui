@@ -75,6 +75,9 @@ export async function resolveCityAccess(
 ): Promise<CityAccess> {
   const places = await getMyPlaces(ports, userId);
   const place = places.find((entry) => entry.geoScopeId === geoScopeId);
-  if (place === undefined || place.kind === 'exploring') return 'exploring';
-  return place.canPublishLocally ? 'local' : 'visitor';
+  if (place === undefined) return 'exploring';
+  // The derived capability leads: vouches can grant local publishing on a tie
+  // still declared as exploring, and the wording must not contradict policy.
+  if (place.canPublishLocally) return 'local';
+  return place.kind === 'exploring' ? 'exploring' : 'visitor';
 }

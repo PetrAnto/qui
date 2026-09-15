@@ -176,9 +176,10 @@ export function LandingSections() {
         <header className="section__head">
           <h2 id="trust-title">Real humans. Minimal data.</h2>
           <p className="muted">
-            Eligibility as a real person comes from an approved identity check or a trusted
-            invitation — and what QUI stores is the attestation, not your documents, not your exact
-            coordinates, not your date of birth.
+            Eligibility as a real person is designed around an approved identity check, with a
+            trusted-invitation path being finalized under the trust model. Either way, what QUI
+            stores is the attestation — not your documents, not your exact coordinates, not your
+            date of birth.
           </p>
           <p className="faint">
             Honest status: this public demo does not run a live verification provider. The switch is

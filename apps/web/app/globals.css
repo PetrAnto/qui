@@ -593,6 +593,11 @@ main:focus {
   scrollbar-width: none;
 }
 
+/* Mode/filter switches are navigation, not metadata: full-size targets. */
+.segmented .btn {
+  min-height: 2.75rem;
+}
+
 .segmented::-webkit-scrollbar {
   display: none;
 }
@@ -858,6 +863,8 @@ main:focus {
 
 .landing__frame {
   position: relative;
+  /* <figure> carries a browser default margin; the collage grid cannot. */
+  margin: 0;
   overflow: hidden;
   border-radius: 1.1rem;
   border: 1px solid hsl(214 40% 26% / 0.8);
