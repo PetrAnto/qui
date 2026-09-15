@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { api } from '../lib/client';
+import type { CityAccess } from '../lib/city';
 import { createSearchSequence } from '../lib/search-sequence';
 
 interface CityResult {
@@ -21,7 +22,32 @@ interface CityResult {
  * "add to my places" step is separate and is what starts to matter for
  * publishing.
  */
-export function CityBar({ cityName, cityId }: { cityName: string; cityId: string }) {
+/**
+ * Consumer-language access labels (canon 04 §2.3). Browsing any city is a
+ * right; publishing into one is what asks for a real tie. No raw trust-policy
+ * or GPS evidence is ever shown — only the practical consequence.
+ */
+const ACCESS_LABELS: Readonly<Record<CityAccess, string>> = {
+  exploring: 'Exploring',
+  visitor: 'Visitor access',
+  local: 'Local access',
+};
+
+const ACCESS_CHIPS: Readonly<Record<CityAccess, string>> = {
+  exploring: 'chip chip--context',
+  visitor: 'chip',
+  local: 'chip chip--info',
+};
+
+export function CityBar({
+  cityName,
+  cityId,
+  access,
+}: {
+  cityName: string;
+  cityId: string;
+  access: CityAccess;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -67,7 +93,7 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
   return (
     <div className="stack stack--tight">
       <div className="citybar">
-        <span className="chip chip--accent">Here</span>
+        <span className={ACCESS_CHIPS[access]}>{ACCESS_LABELS[access]}</span>
         <span className="citybar__name">{cityName}</span>
         <button
           type="button"
@@ -86,6 +112,10 @@ export function CityBar({ cityName, cityId }: { cityName: string; cityId: string
 
       {open ? (
         <div className="card card--pad stack stack--tight">
+          <p className="faint">
+            Exploring any city is free and claims nothing. Publishing here as a local is the part
+            that asks for a real tie — your places live under Me.
+          </p>
           <label className="field">
             <span>Search any city</span>
             <input

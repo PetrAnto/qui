@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 
 import type { GeoScope, GeoScopeId, Ports } from '@indenoi/core';
+import { getMyPlaces } from '@indenoi/core';
 import { getScope, listCities } from '@indenoi/geo';
 
 import { readCookie, serializeCookie } from './cookies';
@@ -55,4 +56,25 @@ export async function resolveActiveCity(ports: Ports, userId: string | null): Pr
   const [first] = listCities();
   if (first === undefined) throw new Error('gazetteer is empty');
   return first;
+}
+
+/**
+ * How the active city relates to the viewer, in consumer language.
+ *
+ * `exploring` — looking is free and claims nothing; `visitor` — a declared tie
+ * that does not (yet) grant local publishing; `local` — publishing access.
+ * This is the only mapping the UI may use: no raw trust-policy or GPS evidence
+ * crosses into the interface (canon 04 §2.3).
+ */
+export type CityAccess = 'exploring' | 'visitor' | 'local';
+
+export async function resolveCityAccess(
+  ports: Ports,
+  userId: string,
+  geoScopeId: GeoScopeId,
+): Promise<CityAccess> {
+  const places = await getMyPlaces(ports, userId);
+  const place = places.find((entry) => entry.geoScopeId === geoScopeId);
+  if (place === undefined || place.kind === 'exploring') return 'exploring';
+  return place.canPublishLocally ? 'local' : 'visitor';
 }

@@ -4,7 +4,12 @@ import { DEMO_USERS } from '@indenoi/db/demo';
 import { CITY_IDS } from '@indenoi/geo';
 
 import { artworkFor, initials } from '../lib/art';
-import { ACTIVE_CITY_COOKIE, activeCityCookieHeader, activeCityFrom } from '../lib/city';
+import {
+  ACTIVE_CITY_COOKIE,
+  activeCityCookieHeader,
+  activeCityFrom,
+  resolveCityAccess,
+} from '../lib/city';
 import { REASON_LABELS, explain, relativeTime, untilTime } from '../lib/format';
 import { TABS } from '../lib/nav';
 import { personaChoices } from '../lib/personas';
@@ -122,5 +127,28 @@ describe('demo persona choices', () => {
       expect(Object.keys(choice).sort()).toEqual(['bio', 'displayName', 'handle', 'id', 'motif']);
     }
     expect(JSON.stringify(adults)).not.toContain('adult_18_plus');
+  });
+});
+
+
+describe('city access wording (canon 04 \u00a72.3)', () => {
+  it('maps ties to consumer language, never to raw evidence', async () => {
+    const store = resetStore();
+    // L\u00e9a lives in Ajaccio: publishing access.
+    await expect(resolveCityAccess(store.ports, DEMO_USERS.lea, CITY_IDS.ajaccio)).resolves.toBe(
+      'local',
+    );
+    // Tom follows Porto with no tie: exploring claims nothing.
+    await expect(resolveCityAccess(store.ports, DEMO_USERS.tom, CITY_IDS.porto)).resolves.toBe(
+      'exploring',
+    );
+    // Maya declared a visitor tie to Ajaccio: present, but not local.
+    await expect(resolveCityAccess(store.ports, DEMO_USERS.maya, CITY_IDS.ajaccio)).resolves.toBe(
+      'visitor',
+    );
+    // No attachment at all is still just exploring.
+    await expect(resolveCityAccess(store.ports, DEMO_USERS.lea, CITY_IDS.kilrush)).resolves.toBe(
+      'exploring',
+    );
   });
 });

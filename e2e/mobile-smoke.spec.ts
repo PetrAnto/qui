@@ -104,8 +104,8 @@ test('publishing as a local is refused where there is no tie', async ({ page }) 
 
 test('answering a signal is the only way to reach somebody', async ({ page }) => {
   await onboard(page, '31');
-  await page.goto('/threads');
-  await expect(page.getByRole('heading', { name: 'Threads' })).toBeVisible();
+  await page.goto('/activity');
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
   // There is no compose control anywhere on the threads surface.
   await expect(page.getByRole('button', { name: /new message|compose/i })).toHaveCount(0);
 

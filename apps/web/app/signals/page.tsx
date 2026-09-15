@@ -5,7 +5,7 @@ import { SIGNAL_TYPES, listSignals, type SignalType } from '@indenoi/core';
 
 import { CityBar } from '../../components/CityBar';
 import { SignalRow } from '../../components/SignalRow';
-import { resolveActiveCity } from '../../lib/city';
+import { resolveActiveCity, resolveCityAccess } from '../../lib/city';
 import { SIGNAL_LABELS } from '../../lib/format';
 import { currentUserId } from '../../lib/session';
 import { ports } from '../../lib/store';
@@ -34,12 +34,13 @@ export default async function SignalsPage({
   const active = parseType(type);
   const store = ports();
   const city = await resolveActiveCity(store, viewerId);
+  const access = await resolveCityAccess(store, viewerId, city.id);
   const cards = await listSignals(store, { viewerId, geoScopeId: city.id, type: active });
   const now = store.now();
 
   return (
     <>
-      <CityBar cityName={city.name} cityId={city.id} />
+      <CityBar cityName={city.name} cityId={city.id} access={access} />
 
       <header className="pagehead">
         <h1>Signals in {city.name}</h1>
