@@ -3,6 +3,7 @@ import {
   LANDING_HERO_PHOTOS,
   requiredAttributions,
 } from '../lib/landing-hero';
+import { Logo } from './Logo';
 
 /**
  * Welcome hero.
@@ -17,7 +18,7 @@ export function LandingHero() {
   return (
     <section className="landing" aria-labelledby="landing-title">
       <div className="landing__copy">
-        <p className="landing__wordmark">QUI</p>
+        <Logo size={26} />
         <h1 id="landing-title">The people around you</h1>
         <p className="landing__lede">
           Not another infinite global feed. A local social world — people,

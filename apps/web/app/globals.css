@@ -6,23 +6,52 @@
  * smaller and easier to read than a framework. Everything is sized in rem,
  * every tap target clears 44px, and the layout respects the safe-area insets so
  * the tab bar sits above the home indicator rather than under it.
+ *
+ * Color comes from the canonical QUI brand system (docs/canon/01_BRAND_SYSTEM.md):
+ * the product UI is light — Ivory/Stone surfaces, Ink text, Coral as an
+ * attention accent, Deep Teal/Sage for secondary depth. Components consume the
+ * semantic `--color-*` tokens, never raw hex. Dark cinematic styling is scoped
+ * to marketing/landing contexts (`.marketing`), never the app chrome.
  */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bg: hsl(222 32% 6%);
-  --bg-soft: hsl(222 28% 9%);
-  --surface: hsl(220 26% 12%);
-  --surface-high: hsl(220 24% 16%);
-  --line: hsl(220 20% 22%);
-  --text: hsl(210 32% 96%);
-  --muted: hsl(214 14% 66%);
-  --faint: hsl(214 12% 50%);
-  --accent: hsl(168 78% 52%);
-  --accent-ink: hsl(200 60% 6%);
-  --warn: hsl(38 92% 62%);
-  --danger: hsl(2 78% 64%);
+  /* Canonical palette (canon §3.1, LOCKED). Not consumed directly below. */
+  --qui-coral: #ff6b4a;
+  --qui-ink: #0f1b2b;
+  --qui-deep-teal: #2d4e5e;
+  --qui-sage: #a8bfaf;
+  --qui-stone: #f2eee7;
+  --qui-ivory: #faf8f4;
+
+  /* Semantic tokens (canon §3.2). */
+  --color-brand: var(--qui-coral);
+  /* Coral itself is too light for text on Ivory (~2.4:1); this derived variant
+     keeps the hue family and passes WCAG AA (~4.6:1 on Ivory). */
+  --color-brand-strong: #c14a2a;
+  /* Ink on Coral is ~6.2:1 — the accessible pairing for primary actions. */
+  --color-on-brand: var(--qui-ink);
+  --color-text: var(--qui-ink);
+  --color-text-muted: #4f5d70;
+  --color-text-faint: #5c6878;
+  --color-surface: var(--qui-ivory);
+  --color-surface-subtle: var(--qui-stone);
+  --color-surface-raised: #ffffff;
+  --color-surface-dark: var(--qui-ink);
+  --color-on-dark: var(--qui-ivory);
+  --color-on-dark-muted: #b7c1cd;
+  --color-accent-secondary: var(--qui-deep-teal);
+  --color-accent-soft: var(--qui-sage);
+  --color-line: #e5dfd3;
+  --color-line-strong: #d3cab9;
+
+  /* State colors are implementation tokens, not brand colors (canon §3.2);
+     each passes AA on Ivory and none competes with Coral. */
+  --color-success: #2f6b4f;
+  --color-warning: #8a5a00;
+  --color-warning-surface: #fdf3e0;
+  --color-danger: #b3261e;
 
   --radius: 18px;
   --radius-sm: 12px;
@@ -30,7 +59,7 @@
   --page: 1.05rem;
   --tabbar: 4.25rem;
 
-  --shadow: 0 18px 40px -28px hsl(220 60% 2% / 0.9);
+  --shadow: 0 14px 34px -26px hsl(30 24% 24% / 0.45);
 }
 
 * {
@@ -44,10 +73,8 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(120% 60% at 50% -10%, hsl(190 60% 14% / 0.5), transparent 60%),
-    var(--bg);
-  color: var(--text);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     sans-serif;
   font-size: 16px;
@@ -97,7 +124,8 @@ p {
   flex-direction: column;
   max-width: 34rem;
   margin: 0 auto;
-  border-inline: 1px solid var(--line);
+  background: var(--color-surface);
+  border-inline: 1px solid var(--color-line);
 }
 
 .app__main {
@@ -118,9 +146,9 @@ p {
   gap: 0.55rem;
   padding: 0.5rem var(--page);
   padding-top: calc(0.5rem + env(safe-area-inset-top));
-  background: hsl(38 92% 62% / 0.14);
-  border-bottom: 1px solid hsl(38 92% 62% / 0.28);
-  color: var(--warn);
+  background: var(--color-warning-surface);
+  border-bottom: 1px solid hsl(38 92% 32% / 0.3);
+  color: var(--color-warning);
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -130,7 +158,7 @@ p {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: var(--warn);
+  background: var(--color-warning);
   flex: none;
 }
 
@@ -151,9 +179,9 @@ p {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  background: hsl(222 32% 7% / 0.94);
+  background: hsl(43 33% 97% / 0.94);
   backdrop-filter: blur(14px);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--color-line);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -164,14 +192,14 @@ p {
   align-items: center;
   justify-content: center;
   gap: 0.15rem;
-  color: var(--faint);
+  color: var(--color-text-faint);
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .tabbar__item[data-active='true'] {
-  color: var(--accent);
+  color: var(--color-brand-strong);
 }
 
 .tabbar__glyph {
@@ -192,13 +220,13 @@ p {
 }
 
 .pagehead__sub {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.86rem;
 }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -233,12 +261,12 @@ p {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 0.86rem;
 }
 
 .faint {
-  color: var(--faint);
+  color: var(--color-text-faint);
   font-size: 0.78rem;
 }
 
@@ -248,33 +276,46 @@ p {
   gap: 0.3rem;
   padding: 0.28rem 0.6rem;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
-  color: var(--muted);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
   font-size: 0.74rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .chip--accent {
-  color: var(--accent-ink);
-  background: var(--accent);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  border-color: transparent;
+}
+
+/* Sage marks context (city, practice), never status — canon §7 chips rule. */
+.chip--context {
+  color: var(--qui-ink);
+  background: var(--color-accent-soft);
+  border-color: transparent;
+}
+
+.chip--info {
+  color: var(--color-on-dark);
+  background: var(--color-accent-secondary);
   border-color: transparent;
 }
 
 .chip--demo {
-  color: var(--warn);
-  border-color: hsl(38 92% 62% / 0.4);
-  background: hsl(38 92% 62% / 0.1);
+  color: var(--color-warning);
+  border-color: hsl(38 92% 32% / 0.4);
+  background: var(--color-warning-surface);
 }
 
 .btn {
   min-height: 2.75rem;
   padding: 0.6rem 1rem;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface-high);
-  color: var(--text);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   font-weight: 650;
   font-size: 0.9rem;
   cursor: pointer;
@@ -290,9 +331,9 @@ p {
 }
 
 .btn--primary {
-  background: var(--accent);
+  background: var(--color-brand);
   border-color: transparent;
-  color: var(--accent-ink);
+  color: var(--color-on-brand);
 }
 
 .btn--ghost {
@@ -300,8 +341,8 @@ p {
 }
 
 .btn--danger {
-  color: var(--danger);
-  border-color: hsl(2 78% 64% / 0.4);
+  color: var(--color-danger);
+  border-color: hsl(2 78% 40% / 0.4);
   background: transparent;
 }
 
@@ -324,7 +365,7 @@ p {
 .field > span {
   font-size: 0.8rem;
   font-weight: 650;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 .input,
@@ -333,8 +374,8 @@ p {
   width: 100%;
   padding: 0.7rem 0.85rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface-raised);
   min-height: 2.75rem;
 }
 
@@ -351,7 +392,7 @@ p {
 .tabbar__item:focus-visible,
 summary:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-brand-strong);
   outline-offset: 2px;
 }
 
@@ -363,8 +404,8 @@ a:focus-visible {
   z-index: 100;
   padding: 0.55rem 0.9rem;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
   font-weight: 700;
   font-size: 0.88rem;
   transform: translateY(-160%);
@@ -374,7 +415,7 @@ a:focus-visible {
 .skip-link:focus,
 .skip-link:focus-visible {
   transform: translateY(0);
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--color-text);
   outline-offset: 2px;
 }
 
@@ -386,23 +427,23 @@ main:focus {
 .notice {
   padding: 0.7rem 0.85rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
-  color: var(--muted);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
   font-size: 0.84rem;
 }
 
 .notice--warn {
-  color: var(--warn);
-  border-color: hsl(38 92% 62% / 0.35);
-  background: hsl(38 92% 62% / 0.08);
+  color: var(--color-warning);
+  border-color: hsl(38 92% 32% / 0.35);
+  background: var(--color-warning-surface);
 }
 
 .empty {
   padding: 2rem 1rem;
   text-align: center;
-  color: var(--faint);
-  border: 1px dashed var(--line);
+  color: var(--color-text-faint);
+  border: 1px dashed var(--color-line-strong);
   border-radius: var(--radius);
 }
 
@@ -440,6 +481,7 @@ main:focus {
   font-size: 1.25rem;
 }
 
+
 /* ------------------------------------------------------------------ feed */
 
 .postcard__body {
@@ -463,7 +505,7 @@ main:focus {
 
 .why {
   font-size: 0.72rem;
-  color: var(--faint);
+  color: var(--color-text-faint);
 }
 
 .why summary {
@@ -516,8 +558,8 @@ main:focus {
   text-align: left;
   padding: 0.6rem 0.7rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-raised);
   cursor: pointer;
   min-height: 2.75rem;
 }
@@ -532,15 +574,15 @@ main:focus {
   max-width: 82%;
   padding: 0.6rem 0.8rem;
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
   font-size: 0.92rem;
 }
 
 .bubble--mine {
   align-self: flex-end;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
   border-color: transparent;
 }
 
@@ -565,7 +607,7 @@ main:focus {
 .table td {
   padding: 0.45rem 0.5rem;
   text-align: right;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--color-line);
   font-variant-numeric: tabular-nums;
 }
 
@@ -576,7 +618,7 @@ main:focus {
 }
 
 .table thead th {
-  color: var(--faint);
+  color: var(--color-text-faint);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -585,7 +627,7 @@ main:focus {
 .bar {
   height: 0.35rem;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--color-brand);
   min-width: 2px;
 }
 
@@ -598,11 +640,11 @@ main:focus {
   flex: 1;
   height: 0.25rem;
   border-radius: 999px;
-  background: var(--line);
+  background: var(--color-line-strong);
 }
 
 .steps span[data-done='true'] {
-  background: var(--accent);
+  background: var(--color-brand);
 }
 
 .visually-hidden {
@@ -613,6 +655,34 @@ main:focus {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ------------------------------------------------------------------ logo */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.logo__word {
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: var(--color-text);
+}
+
+.logo--on-dark .logo__word,
+.logo__word--on-dark {
+  color: var(--color-on-dark);
+}
+
+
+/* ------------------------------------------------------- welcome / landing */
 
 .app:has(.welcome) {
   max-width: 72rem;
@@ -630,11 +700,22 @@ main:focus {
   padding-bottom: 2rem;
 }
 
+/*
+ * The landing page is the marketing surface: the hero runs in the dark
+ * cinematic mode (canon §8.3) while the product-proof sections below it stay
+ * in the light product system. `.marketing` scopes the dark tokens so the
+ * mood never leaks into app chrome (the anti-drift rule, canon §0).
+ */
+.marketing {
+  color-scheme: dark;
+  background: var(--color-surface-dark);
+  color: var(--color-on-dark);
+  border-radius: var(--radius);
+}
+
 .landing {
   display: grid;
   gap: 1.25rem;
-  --coral: hsl(12 72% 58%);
-  --ivory: hsl(38 36% 94%);
 }
 
 .landing__wordmark {
@@ -642,7 +723,7 @@ main:focus {
   font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0.28em;
-  color: var(--coral);
+  color: var(--color-brand);
 }
 
 .landing h1 {
@@ -653,15 +734,23 @@ main:focus {
 }
 
 .landing__lede {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-size: 1.02rem;
   max-width: 34rem;
 }
 
+.marketing .landing__lede {
+  color: var(--color-on-dark-muted);
+}
+
 .landing__disclaimer {
-  color: var(--faint);
+  color: var(--color-text-faint);
   font-size: 0.78rem;
   max-width: 36rem;
+}
+
+.marketing .landing__disclaimer {
+  color: var(--color-on-dark-muted);
 }
 
 .landing__stage {
@@ -687,12 +776,15 @@ main:focus {
 
 .landing__frame {
   position: relative;
-  z-index: 1;
-  margin: 0;
   overflow: hidden;
   border-radius: 1.1rem;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-subtle);
+}
+
+.marketing .landing__frame {
+  border-color: hsl(214 40% 26% / 0.8);
+  background: var(--color-surface-dark);
 }
 
 .landing__frame img {
@@ -865,3 +957,4 @@ main:focus {
     transition: none !important;
   }
 }
+
