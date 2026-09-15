@@ -27,7 +27,9 @@ test('the demo says what it is, on every screen', async ({ page }) => {
 
 test('welcome shows an editorial people hero without inventing members', async ({ page }) => {
   await page.goto('/welcome');
-  await expect(page.getByRole('heading', { name: 'The people around you' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /social network for everyone/i }),
+  ).toBeVisible();
   await expect(page.getByText(/not members, not endorsements/i)).toBeVisible();
   await expect(page.getByRole('img', { name: /photographing in a city square/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'How old are you?' })).toBeVisible();
