@@ -23,7 +23,7 @@ export function TrustBadges({ trust }: { trust: TrustSignals }) {
   return (
     <div className="row row--wrap">
       {held.map((key) => (
-        <span key={key} className="chip">
+        <span key={key} className="chip chip--context">
           ✓ {LABELS[key]}
         </span>
       ))}

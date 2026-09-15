@@ -75,3 +75,24 @@ export const REASON_LABELS: Readonly<Record<PolicyReason, string>> = {
 export function explain(reason: PolicyReason): string {
   return REASON_LABELS[reason];
 }
+
+/**
+ * Why am I seeing this? in consumer language (canon 04 §3.5).
+ *
+ * The ranking breakdown keys are machine terms from ADR-0008; the interface
+ * owes people sentences instead. The mapping is total on purpose: an
+ * unexplained term would be a small lie of omission in a surface whose whole
+ * point is that the feed can be argued with.
+ */
+export const WHY_LABELS: Readonly<Record<string, string>> = {
+  freshness: 'Posted recently',
+  geography: 'From around here',
+  affinity: 'Matches something you do',
+  engagement: 'People responded to it',
+  localTraction: 'Landing with people local to it',
+  repeatCreatorPenalty: 'Making room for other voices',
+};
+
+export function whyLabel(term: string): string {
+  return WHY_LABELS[term] ?? term;
+}

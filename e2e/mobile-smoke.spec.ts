@@ -27,7 +27,9 @@ test('the demo says what it is, on every screen', async ({ page }) => {
 
 test('welcome shows an editorial people hero without inventing members', async ({ page }) => {
   await page.goto('/welcome');
-  await expect(page.getByRole('heading', { name: 'The people around you' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /social network for everyone/i }),
+  ).toBeVisible();
   await expect(page.getByText(/not members, not endorsements/i)).toBeVisible();
   await expect(page.getByRole('img', { name: /photographing in a city square/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'How old are you?' })).toBeVisible();
@@ -67,13 +69,15 @@ test('a card can be appreciated, and explains why it is in the feed', async ({ p
   const first = page.locator('article.card').first();
   await expect(first).toBeVisible();
 
-  const heart = first.getByRole('button', { name: /♥/ });
+  // The control's accessible name is its aria-label (the count in words);
+  // the ♥ glyph is visible content, not the name.
+  const heart = first.getByRole('button', { name: /appreciate/i });
   const before = await heart.textContent();
   await heart.click();
   await expect(heart).not.toHaveText(before ?? '');
 
   await first.getByText('Why am I seeing this?').click();
-  await expect(first.getByText('geography')).toBeVisible();
+  await expect(first.getByText('From around here')).toBeVisible();
 });
 
 test('any city can be switched to, with no permission and no evidence', async ({ page }) => {
@@ -104,8 +108,8 @@ test('publishing as a local is refused where there is no tie', async ({ page }) 
 
 test('answering a signal is the only way to reach somebody', async ({ page }) => {
   await onboard(page, '31');
-  await page.goto('/threads');
-  await expect(page.getByRole('heading', { name: 'Threads' })).toBeVisible();
+  await page.goto('/activity');
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
   // There is no compose control anywhere on the threads surface.
   await expect(page.getByRole('button', { name: /new message|compose/i })).toHaveCount(0);
 
