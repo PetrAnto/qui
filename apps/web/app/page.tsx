@@ -6,7 +6,7 @@ import { getDiscoverFeed } from '@indenoi/core';
 import { CityBar } from '../components/CityBar';
 import { PostCard } from '../components/PostCard';
 import { TrackView } from '../components/TrackView';
-import { resolveActiveCity } from '../lib/city';
+import { resolveActiveCity, resolveCityAccess } from '../lib/city';
 import { currentUserId } from '../lib/session';
 import { ports } from '../lib/store';
 
@@ -27,13 +27,24 @@ export default async function DiscoverPage() {
 
   const store = ports();
   const city = await resolveActiveCity(store, viewerId);
+  const access = await resolveCityAccess(store, viewerId, city.id);
   const feed = await getDiscoverFeed(store, { viewerId, activeGeoScopeId: city.id });
   const now = store.now();
 
   return (
     <>
       <TrackView name="discover_impression" geoScopeId={city.id} />
-      <CityBar cityName={city.name} cityId={city.id} />
+      <CityBar cityName={city.name} cityId={city.id} access={access} />
+
+      {/* Only the modes with honest, distinct behavior behind them. */}
+      <nav className="segmented" aria-label="Discover modes">
+        <Link className="btn btn--small btn--primary" href="/" aria-current="page">
+          For you
+        </Link>
+        <Link className="btn btn--small" href="/people">
+          People
+        </Link>
+      </nav>
 
       <header className="pagehead">
         <h1>What people here actually do</h1>

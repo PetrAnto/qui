@@ -279,7 +279,7 @@ export function Onboarding() {
             matches what you told us, and everything you then do is real code against real rules.
           </p>
           <p className="muted">
-            You can swap to any other demo person at any time from the You tab.
+            You can swap to any other demo person at any time from the Me tab.
           </p>
           {error !== null ? <p className="notice notice--warn">{error}</p> : null}
           <button

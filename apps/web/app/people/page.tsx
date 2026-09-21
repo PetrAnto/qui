@@ -6,7 +6,7 @@ import { getPeopleInCity } from '@indenoi/core';
 import { Avatar } from '../../components/Avatar';
 import { CityBar } from '../../components/CityBar';
 import { TrustBadges } from '../../components/TrustBadges';
-import { resolveActiveCity } from '../../lib/city';
+import { resolveActiveCity, resolveCityAccess } from '../../lib/city';
 import { currentUserId } from '../../lib/session';
 import { ports } from '../../lib/store';
 
@@ -26,11 +26,21 @@ export default async function PeoplePage() {
 
   const store = ports();
   const city = await resolveActiveCity(store, viewerId);
+  const access = await resolveCityAccess(store, viewerId, city.id);
   const people = await getPeopleInCity(store, { viewerId, geoScopeId: city.id });
 
   return (
     <>
-      <CityBar cityName={city.name} cityId={city.id} />
+      <CityBar cityName={city.name} cityId={city.id} access={access} />
+
+      <nav className="segmented" aria-label="Discover modes">
+        <Link className="btn btn--small" href="/">
+          For you
+        </Link>
+        <Link className="btn btn--small btn--primary" href="/people" aria-current="page">
+          People
+        </Link>
+      </nav>
 
       <header className="pagehead">
         <h1>People in {city.name}</h1>

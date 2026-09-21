@@ -62,19 +62,23 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       <TrustBadges trust={profile.trust} />
 
       <section className="card card--pad stack stack--tight">
-        <h2>What they do</h2>
+        <h2>Practices</h2>
         <div className="row row--wrap">
           {profile.practices.map((value) => (
-            <span key={value} className="chip">
+            <span key={value} className="chip chip--context">
               {value}
             </span>
           ))}
         </div>
         {profile.canHelpWith.length > 0 ? (
-          <p className="muted">Can help with: {profile.canHelpWith.join(', ')}</p>
+          <p className="muted">
+            <strong>Can help with:</strong> {profile.canHelpWith.join(', ')}
+          </p>
         ) : null}
         {profile.wantsToLearn.length > 0 ? (
-          <p className="muted">Wants to learn: {profile.wantsToLearn.join(', ')}</p>
+          <p className="muted">
+            <strong>Wants to learn:</strong> {profile.wantsToLearn.join(', ')}
+          </p>
         ) : null}
       </section>
 
@@ -115,7 +119,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
 
       {view.posts.length > 0 ? (
         <section className="stack stack--tight">
-          <h2>Recently</h2>
+          <h2>Posts</h2>
           {view.posts.map((post) => (
             <article key={post.id} className="card">
               <Art media={post.media} />
