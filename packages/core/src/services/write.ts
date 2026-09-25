@@ -7,6 +7,7 @@ import {
   canHost,
   canJoinEvent,
   canOpenScopedThread,
+  canReportOutcome,
   canRespondToSignal,
   canSendMessage,
   opensPrivateThread,
@@ -414,6 +415,11 @@ export async function joinSignal(
   if (creator === null) return fail('not_found');
 
   const participants = await ports.repo.listParticipants(signal.id);
+  // Joining twice is not joining again: no second row, no second event, and
+  // no capacity check against a place the person already holds.
+  if (participants.some((entry) => entry.userId === input.actorId && entry.state === 'joined')) {
+    return ok({ signalId: signal.id });
+  }
   const joinedCount = participants.filter((entry) => entry.state === 'joined').length;
   const decision = canJoinEvent(actor.view, signal, creator.view, graph, joinedCount, ports.now());
   if (!decision.allowed) return fail(decision.reason);
@@ -436,7 +442,13 @@ export async function joinSignal(
 
 /**
  * Host decision on a response. Accepting an Ask/Offer is the *only* way a
- * private thread comes into existence.
+ * private thread comes into existence; accepting a Join/Event response puts
+ * the responder on the participant list.
+ *
+ * Every check runs before the first write. A refusal therefore leaves the
+ * response, the participant list, the audit log and analytics exactly as they
+ * were — a half-applied acceptance (response marked accepted, nobody joined)
+ * would be a state no other code path expects.
  */
 export async function decideResponse(
   ports: Ports,
@@ -461,23 +473,64 @@ export async function decideResponse(
   const responder = await loadActor(ports, response.responderId);
   if (responder === null) return fail('not_found');
 
-  await ports.repo.putResponse({ ...response, state: input.decision });
-  await audit(ports, {
-    actorId: input.hostId,
-    action: `response_${input.decision}`,
-    subjectType: 'signal_response',
-    subjectId: response.id,
-  });
+  // A withdrawn response is no longer anybody's request, and an accepted one
+  // has already produced a participant or a thread that a later "decline"
+  // would silently orphan. Removing someone is a separate host power.
+  if (response.state === 'withdrawn') return fail('conflict');
+  if (response.state === 'accepted' && input.decision === 'declined') return fail('conflict');
 
-  if (input.decision !== 'accepted') return ok({ threadId: null });
+  // Repeating the decision already recorded is a no-op, not a second effect.
+  if (response.state === input.decision) {
+    if (input.decision === 'declined' || !opensPrivateThread(signal.type)) {
+      return ok({ threadId: null });
+    }
+    const existing = (await ports.repo.listThreads(host.person.id)).find(
+      (thread) => thread.responseId === response.id,
+    );
+    return ok({ threadId: existing?.id ?? null });
+  }
+
+  if (input.decision === 'declined') {
+    await ports.repo.putResponse({ ...response, state: 'declined' });
+    await audit(ports, {
+      actorId: input.hostId,
+      action: 'response_declined',
+      subjectType: 'signal_response',
+      subjectId: response.id,
+    });
+    return ok({ threadId: null });
+  }
 
   if (!opensPrivateThread(signal.type)) {
-    await ports.repo.putParticipant({
-      signalId: signal.id,
-      userId: responder.person.id,
-      state: 'joined',
-      joinedAt: ports.now(),
+    // Accepting into a group is joining on the responder's behalf, so it must
+    // pass exactly what joining directly passes: live signal, no block, no
+    // exclusion, audience, and a free place. A responder who already joined
+    // directly holds their place and is not counted twice.
+    const participants = await ports.repo.listParticipants(signal.id);
+    const alreadyJoined = participants.some(
+      (entry) => entry.userId === responder.person.id && entry.state === 'joined',
+    );
+    if (!alreadyJoined) {
+      const joinedCount = participants.filter((entry) => entry.state === 'joined').length;
+      const eligible = canJoinEvent(responder.view, signal, host.view, graph, joinedCount, ports.now());
+      if (!eligible.allowed) return fail(eligible.reason);
+    }
+
+    await ports.repo.putResponse({ ...response, state: 'accepted' });
+    await audit(ports, {
+      actorId: input.hostId,
+      action: 'response_accepted',
+      subjectType: 'signal_response',
+      subjectId: response.id,
     });
+    if (!alreadyJoined) {
+      await ports.repo.putParticipant({
+        signalId: signal.id,
+        userId: responder.person.id,
+        state: 'joined',
+        joinedAt: ports.now(),
+      });
+    }
     return ok({ threadId: null });
   }
 
@@ -488,6 +541,14 @@ export async function decideResponse(
     graph,
   );
   if (!allowed.allowed) return fail(allowed.reason);
+
+  await ports.repo.putResponse({ ...response, state: 'accepted' });
+  await audit(ports, {
+    actorId: input.hostId,
+    action: 'response_accepted',
+    subjectType: 'signal_response',
+    subjectId: response.id,
+  });
 
   const threadId = ports.newId('thr');
   await ports.repo.putThread({
@@ -835,14 +896,31 @@ export async function createVouch(
 
 /**
  * Self-reported real-world outcome. This is the metric the whole product exists
- * to move, so it is instrumented even though it is only ever self-declared.
+ * to move, so it is instrumented even though it is only ever self-declared —
+ * and for the same reason only someone who was part of the signal may report
+ * it (canReportOutcome). It records a claim, never verified attendance.
  */
 export async function recordLocalOutcome(
   ports: Ports,
   input: { actorId: UserId; signalId: SignalId },
 ): Promise<ServiceResult<{ recorded: true }>> {
-  const signal = await ports.repo.getSignal(input.signalId);
-  if (signal === null) return fail('not_found');
+  const [actor, signal] = await Promise.all([
+    loadActor(ports, input.actorId),
+    ports.repo.getSignal(input.signalId),
+  ]);
+  if (actor === null || signal === null) return fail('not_found');
+  const [participants, responses] = await Promise.all([
+    ports.repo.listParticipants(signal.id),
+    ports.repo.listResponses({ signalId: signal.id }),
+  ]);
+  const decision = canReportOutcome(actor.view, signal, {
+    joined: participants.some((entry) => entry.userId === input.actorId && entry.state === 'joined'),
+    acceptedResponse: responses.some(
+      (response) => response.responderId === input.actorId && response.state === 'accepted',
+    ),
+  });
+  if (!decision.allowed) return fail(decision.reason);
+
   await track(ports, {
     name: 'local_outcome_recorded',
     actorId: input.actorId,

@@ -29,6 +29,11 @@ function isLive(signal: Signal, now: Instant): boolean {
   return true;
 }
 
+/** Open and not expired — the same test every response and join goes through. */
+export function isSignalLive(signal: Signal, now: Instant): boolean {
+  return isLive(signal, now);
+}
+
 /**
  * INV-DM-1 lives here. Contact always starts from a signal somebody chose to
  * publish; there is no function anywhere that opens a conversation without one.
@@ -137,6 +142,37 @@ export function canContact(
   if (context.openThreadId !== null) return ALLOW;
   if (context.respondableSignal === null) return deny('no_signal_context');
   return canRespondToSignal(viewer, context.respondableSignal, subject, graph, now);
+}
+
+/**
+ * What a person already has to do with a signal. Loaded by the caller so the
+ * rule below stays a pure function of facts rather than of a repository.
+ */
+export interface SignalMembership {
+  /** Holds a participant row in state 'joined'. */
+  readonly joined: boolean;
+  /** Has a response to this signal that its host accepted. */
+  readonly acceptedResponse: boolean;
+}
+
+/**
+ * "It actually happened" is a self-report, and it only means something coming
+ * from someone who was part of the thing: its host, a joined participant, or a
+ * responder the host said yes to. Anyone else would be inflating the one
+ * number the product exists to move. This is not attendance verification —
+ * nothing here checks that anybody turned up.
+ */
+export function canReportOutcome(
+  actor: ActorView,
+  signal: Signal,
+  membership: SignalMembership,
+): Decision {
+  const active = requireActive(actor);
+  if (!active.allowed) return active;
+  if (signal.state === 'removed') return deny('content_removed');
+  if (signal.creatorId === actor.id) return ALLOW;
+  if (membership.joined || membership.acceptedResponse) return ALLOW;
+  return deny('not_participant');
 }
 
 // ---------------------------------------------------------------------------
