@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 
 import type { GeoAttachmentKind } from '@indenoi/core';
 
+import { takeReturnTo } from '../lib/activity-draft';
 import { api } from '../lib/client';
 import { ATTACHMENT_LABELS } from '../lib/format';
 import { ONBOARDING_KINDS } from '../lib/kinds';
@@ -75,7 +76,10 @@ export function Onboarding() {
       setStep('age');
       return;
     }
-    router.push('/');
+    // Somebody who started from the activity search goes back to it, with
+    // their inputs still in this tab (lib/activity-draft.ts). Only an
+    // allow-listed internal path is honoured; everyone else lands on Discover.
+    router.push(takeReturnTo() ?? '/');
     router.refresh();
   }
 

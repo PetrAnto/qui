@@ -4,6 +4,7 @@ import { DEMO_USERS } from '@indenoi/db/demo';
 import { CITY_IDS } from '@indenoi/geo';
 
 import { POST as setActiveCity } from '../app/api/active-city/route';
+import { POST as searchActivitiesRoute } from '../app/api/activities/search/route';
 import { GET as discover } from '../app/api/discover/route';
 import { GET as insights } from '../app/api/insights/route';
 import { POST as createInvite, PUT as acceptInvite } from '../app/api/invites/route';
@@ -42,6 +43,7 @@ describe('every route refuses an anonymous caller', () => {
       track(request('/api/track', { method: 'POST', body: '{}' })),
       vouch(request('/api/vouches', { method: 'POST', body: '{}' })),
       createInvite(request('/api/invites', { method: 'POST', body: '{}' })),
+      searchActivitiesRoute(request('/api/activities/search', { method: 'POST', body: '{}' })),
     ]);
     for (const response of responses) {
       expect(response.status).toBe(401);

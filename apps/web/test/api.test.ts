@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DEMO_USERS } from '@indenoi/db/demo';
 import { CITY_IDS } from '@indenoi/geo';
 
+import { POST as searchActivitiesRoute } from '../app/api/activities/search/route';
 import { POST as appreciate } from '../app/api/appreciations/route';
 import { POST as block } from '../app/api/blocks/route';
 import { GET as searchCities, POST as addCity } from '../app/api/cities/route';
@@ -272,5 +273,63 @@ describe('reporting', () => {
     const body = await response.text();
     expect(body).not.toContain('private moderator context');
     expect(body).not.toContain('caseId');
+  });
+});
+
+describe('activity search', () => {
+  const body = {
+    practice: 'climbing',
+    geoScopeId: CITY_IDS.lyon,
+    slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+    durationMinutes: 90,
+  };
+
+  it('answers a signed-in search privately, with reasons and no participant list', async () => {
+    const response = await searchActivitiesRoute(
+      request('/api/activities/search', { method: 'POST', as: DEMO_USERS.lea, body: JSON.stringify(body) }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    const view = (await response.json()) as {
+      timezone: string;
+      results: { card: { signal: Record<string, unknown> }; match: { verdict: string } }[];
+    };
+    expect(view.timezone).toBe('Europe/Paris');
+    expect(view.results[0]?.match.verdict).toBe('unconfirmed');
+    expect(view.results[0]?.card.signal).not.toHaveProperty('participants');
+  });
+
+  it('refuses input it cannot interpret', async () => {
+    for (const bad of [
+      { ...body, geoScopeId: 'geo:city:atlantis' },
+      { ...body, slots: [{ date: '2026-08-18', part: 'midnight' }] },
+      { ...body, slots: 'tuesday' },
+      { ...body, practice: '' },
+      { ...body, durationMinutes: '90' },
+    ]) {
+      const response = await searchActivitiesRoute(
+        request('/api/activities/search', { method: 'POST', as: DEMO_USERS.lea, body: JSON.stringify(bad) }),
+      );
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it('writes nothing, even across repeated searches', async () => {
+    const repo = getStore().ports.repo;
+    const before = JSON.stringify([await repo.listSignals(), await repo.listParticipants(), await repo.listAnalytics()]);
+    for (let index = 0; index < 3; index += 1) {
+      await searchActivitiesRoute(
+        request('/api/activities/search', { method: 'POST', as: DEMO_USERS.hugo, body: JSON.stringify(body) }),
+      );
+    }
+    expect(JSON.stringify([await repo.listSignals(), await repo.listParticipants(), await repo.listAnalytics()])).toBe(
+      before,
+    );
+  });
+
+  it('lets the public city lookup name a place’s time zone, and nothing about people', async () => {
+    const response = await searchCities(request('/api/cities?q=lyon'));
+    const { cities } = (await response.json()) as { cities: Record<string, unknown>[] };
+    expect(cities[0]).toMatchObject({ id: CITY_IDS.lyon, timezone: 'Europe/Paris' });
   });
 });

@@ -10,20 +10,23 @@ Updated: **2026-09-25** (branch `feat/activity-foundations`: participation
 fixes, `INV-OUTCOME-1`, pure activity modules; counts below re-run on that
 branch, Node 22.23.1, `vitest run --maxWorkers=1`; re-run after the review
 rounds on `b904670` and `258dd44`).
+Updated: **2026-09-25** (branch `feat/activity-search-preview`: activity search,
+results and proposal preview; same command).
 
 ## Unit and integration suite — PASSING
 
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  19 passed (19)
-     Tests  278 passed (278)
+Test Files  22 passed (22)
+     Tests  306 passed (306)
 ```
 
 | Project | File | Tests |
 |---|---|---|
 | core | `test/safety-invariants.test.ts` | 43 |
 | core | `test/activity.test.ts` | 45 |
+| core | `test/search-input.test.ts` | 7 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
@@ -31,13 +34,15 @@ Test Files  19 passed (19)
 | db | `test/d1.test.ts` | 18 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
+| db | `test/search.test.ts` | 11 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
-| web | `test/api.test.ts` | 13 |
+| web | `test/api.test.ts` | 17 |
+| web | `test/activity-draft.test.ts` | 6 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
@@ -118,7 +123,18 @@ defect (#30, fixed in #31): stale selection cleared on edit, a slow older
 search never overwriting newer results, clearing not undone by a late
 response, no reopening after selection, and switcher persistence across
 reload. The races are made deterministic by holding specific HTTP responses at
-the network layer. Total e2e: **21 tests**.
+the network layer.
+
+`e2e/activity-search.spec.ts` adds **3 tests** for activity search:
+- anonymous search → preview → reload → demo onboarding → back on `/search`
+  with every input restored and results shown;
+- no results still offers the proposal preview;
+- the entry point from Signals.
+
+Each of them asserts that no publish, join or respond request is sent.
+
+Total e2e: **24 tests**. Where they were executed for this branch is recorded in
+its pull request.
 
 Recorded local runs:
 

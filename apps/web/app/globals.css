@@ -1165,3 +1165,42 @@ main:focus {
   }
 }
 
+
+/* Activity search (app/search). Built from the existing semantic tokens. */
+.field-label {
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
+
+.daylabel {
+  min-width: 6.5rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.slot--preferred {
+  outline: 2px solid var(--color-accent-secondary);
+  outline-offset: 1px;
+}
+
+.reasons {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+}
+
+.reasons [data-outcome='unmet'] {
+  color: var(--color-danger);
+}
+
+.reasons [data-outcome='unknown'] {
+  color: var(--color-warning);
+}
+
+fieldset.stack {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}

@@ -249,9 +249,29 @@ and Event, exactly as it does today.
 | Equipment needs, contributions, interval-specific coverage | `activity/equipment.ts` | pure, tested |
 | Compatibility with reasons, deterministic ordering | `activity/match.ts` | pure, tested |
 | Honest description of existing Join/Event signals | `activity/describe.ts` | pure, tested |
+| Day/part-of-day slots to instants in the city's zone (DST-safe) | `activity/search-input.ts` | pure, tested |
+| Proposal preview built from the search inputs | `activity/preview.ts` | pure, tested |
+| Read-only activity search | `services/search.ts`, `POST /api/activities/search` | wired, tested |
+| Search → results → preview screen | `app/search`, `components/ActivitySearch.tsx` | wired, e2e |
 
-These modules are not exported from the package root. They are not wired into
-any route, service, repository or UI, and they change no permission.
+**Search, results and preview (synthetic demo).**
+
+- The search reads only: no publish, join, response or analytics event.
+- Its candidates are exactly what the Signals list already shows the viewer
+  (`listSignals`), so blocks and adult-only audiences are removed *before*
+  matching. Only open Join/Event signals are matched.
+- Every seeded signal has a start but no end time, so its honest best result is
+  "Needs confirmation".
+- The form works without a session. The draft lives only in this tab's
+  `sessionStorage`; it never goes into a URL, and the search request is a POST.
+- The search itself requires the demo identity. Onboarding returns to `/search`
+  through an allow-listed return path, with the inputs intact.
+- The preview is built from the same inputs, including when nothing matches.
+  It cannot be published: proposing without hosting still awaits P5.
+- **Anonymous results are not offered.** An identity-free anonymous projection
+  remains an open decision.
+
+The modules change no permission.
 
 Runtime participation fixes. These restrict; they do not widen:
 

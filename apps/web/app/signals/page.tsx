@@ -68,6 +68,9 @@ export default async function SignalsPage({
       <Link className="btn btn--primary btn--block" href="/signals/new">
         Put one up
       </Link>
+      <Link className="btn btn--block" href="/search">
+        Find something to do
+      </Link>
 
       {cards === null || cards.length === 0 ? (
         <p className="empty">Nothing open in {city.name} right now. Yours would be the first.</p>
