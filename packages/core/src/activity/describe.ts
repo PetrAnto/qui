@@ -14,6 +14,13 @@ import { normalizePracticeKey } from './match';
  * criterion it cannot speak to. Capacity keeps its historical meaning: places
  * for people other than the host.
  */
+/** A practice that normalises to nothing is no practice at all: unknown, not "". */
+function practiceKeyOf(practice: string | null): string | null {
+  if (practice === null) return null;
+  const key = normalizePracticeKey(practice);
+  return key === '' ? null : key;
+}
+
 export function describeSignal(
   signal: Signal,
   context: {
@@ -30,7 +37,7 @@ export function describeSignal(
     geoScopeId: signal.geoScopeId,
     timezone: context.timezone,
     live: isSignalLive(signal, context.now),
-    practiceKey: signal.practice === null ? null : normalizePracticeKey(signal.practice),
+    practiceKey: practiceKeyOf(signal.practice),
     timing: signal.startsAt === null ? { kind: 'unknown' } : { kind: 'start_only', start: signal.startsAt },
     capacity: { places: signal.capacity, counts: 'excludes_organizer' },
     participation: {

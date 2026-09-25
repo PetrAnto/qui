@@ -9,7 +9,7 @@ Updated: **2026-08-19** (counts re-run on `0692bc1`; live-deploy correction).
 Updated: **2026-09-25** (branch `feat/activity-foundations`: participation
 fixes, `INV-OUTCOME-1`, pure activity modules; counts below re-run on that
 branch, Node 22.23.1, `vitest run --maxWorkers=1`; re-run after the review
-round on `b904670`).
+rounds on `b904670` and `258dd44`).
 
 ## Unit and integration suite — PASSING
 
@@ -17,20 +17,20 @@ round on `b904670`).
 
 ```
 Test Files  19 passed (19)
-     Tests  263 passed (263)
+     Tests  278 passed (278)
 ```
 
 | Project | File | Tests |
 |---|---|---|
 | core | `test/safety-invariants.test.ts` | 43 |
-| core | `test/activity.test.ts` | 36 |
+| core | `test/activity.test.ts` | 45 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
 | db | `test/d1.test.ts` | 18 |
 | db | `test/flows.test.ts` | 16 |
-| db | `test/participation.test.ts` | 23 |
+| db | `test/participation.test.ts` | 29 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
@@ -89,6 +89,18 @@ Run against `b904670`'s code, **14 failed and 2 passed**. The 2 that pass
 assert preserved behaviour: an eligible member's retry into a full activity
 is still a no-op success, and the host and accepted Offer responder can still
 report.
+
+2026-09-25, Codex review `5320398217` on `258dd44`: 15 new regressions for
+three findings.
+- P1: Ask/Offer acceptance did not revalidate lifecycle and host exclusion.
+- P2: non-Latin practice keys collapsed to an empty key.
+- P2: preferred availability depended on input order.
+
+Run against `258dd44`'s code, **10 failed and 5 passed**. Three of the five
+assert preserved rules (suspension, the private-thread age rule, a partial
+preferred overlap not counting). The other two (same non-Latin practice,
+canonical equivalence) passed only because both sides normalised to an empty
+key, which is the defect itself.
 
 ## End-to-end suite — PASSING
 

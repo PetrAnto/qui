@@ -1,7 +1,7 @@
 import { canAppreciate, canViewPost } from '../policy/access';
 import { ageBandFromAge } from '../policy/age';
 import { canInvite, canPublishInGeo, canVouch } from '../policy/capabilities';
-import { requireActive } from '../policy/decision';
+import { all, requireActive } from '../policy/decision';
 import {
   canExerciseHostPower,
   canHost,
@@ -535,11 +535,20 @@ export async function decideResponse(
     return ok({ threadId: null });
   }
 
-  const allowed = canOpenScopedThread(
-    host.view,
-    responder.view,
-    { signalType: signal.type, response: { state: 'accepted', signalId: signal.id } },
-    graph,
+  // Accepting an Ask/Offer opens a private thread, so the responder must be
+  // eligible to respond *now* — live signal, not excluded by this host, not
+  // suspended, no block, audience, capability (canRespondToSignal) — and the
+  // pair must still be allowed a private space (canOpenScopedThread, which
+  // keeps the age-band rule). A repeat is revalidated the same way before it
+  // reports success; the conversation it already opened is left as it is.
+  const allowed = all(
+    canRespondToSignal(responder.view, signal, host.view, graph, ports.now()),
+    canOpenScopedThread(
+      host.view,
+      responder.view,
+      { signalType: signal.type, response: { state: 'accepted', signalId: signal.id } },
+      graph,
+    ),
   );
   if (!allowed.allowed) return fail(allowed.reason);
 

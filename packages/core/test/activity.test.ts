@@ -753,3 +753,101 @@ describe('R3 — equipment for a flexible window', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review 5320398217, thread 4106808157 (P2): practice keys keep non-Latin
+// letters, and an empty key never matches.
+// ---------------------------------------------------------------------------
+
+describe('P2 — Unicode practice keys', () => {
+  const tokyo = (practiceKey: string | null) =>
+    activity({
+      signalId: 'sig-unicode',
+      geoScopeId: 'geo:city:tokyo',
+      timezone: 'Asia/Tokyo',
+      practiceKey,
+      timing: { kind: 'unknown' },
+    });
+  const ask = (practiceKey: string): ActivityQuery => ({
+    practiceKey,
+    geoScopeId: 'geo:city:tokyo',
+    timezone: 'Asia/Tokyo',
+    availability: [],
+  });
+  const practiceOutcome = (query: string, activityKey: string | null) =>
+    matchActivity(ask(query), tokyo(activityKey), NOW).reasons.find((reason) => reason.criterion === 'practice')?.outcome;
+
+  it('keeps distinct Japanese practices distinct', () => {
+    expect(normalizePracticeKey('ヨガ')).not.toBe('');
+    expect(normalizePracticeKey('ヨガ')).not.toBe(normalizePracticeKey('水泳'));
+    expect(practiceOutcome('ヨガ', '水泳')).toBe('unmet');
+  });
+
+  it('matches the same non-Latin practice', () => {
+    expect(practiceOutcome('ヨガ', 'ヨガ')).toBe('met');
+    expect(practiceOutcome('योग', 'योग')).toBe('met');
+  });
+
+  it('keeps combining marks that distinguish non-Latin words', () => {
+    // が and か differ only by a combining voiced mark; योग and यग only by a vowel sign.
+    expect(normalizePracticeKey('が')).not.toBe(normalizePracticeKey('か'));
+    expect(normalizePracticeKey('योग')).not.toBe(normalizePracticeKey('यग'));
+  });
+
+  it('treats canonically equivalent spellings as one key', () => {
+    expect(normalizePracticeKey('が')).toBe(normalizePracticeKey('が')); // composed vs decomposed が
+    expect(normalizePracticeKey('Randonnée')).toBe(normalizePracticeKey('Randonnée'));
+    expect(practiceOutcome('が', 'が')).toBe('met');
+  });
+
+  it('never reports two empty keys as the same activity', () => {
+    expect(normalizePracticeKey('!!!')).toBe('');
+    expect(practiceOutcome('!!!', '???')).not.toBe('met');
+    expect(practiceOutcome('', 'walk')).not.toBe('met');
+    expect(practiceOutcome('walk', '')).not.toBe('met');
+  });
+
+  it('keeps the intended Latin normalisation', () => {
+    expect(normalizePracticeKey('  Paddle Board ')).toBe('paddle-board');
+    expect(normalizePracticeKey('Randonnée')).toBe('randonnee');
+    expect(normalizePracticeKey('ＹＯＧＡ')).toBe('yoga');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review 5320398217, thread 4106808164 (P2): preference comes from any
+// preferred interval that covers the time, whatever the input order.
+// ---------------------------------------------------------------------------
+
+describe('P2 — preferred availability is order-independent', () => {
+  const appointment = span('sat', '10:30', '11:30');
+  const scheduled = activity({ signalId: 'sig-fixed', timing: { kind: 'scheduled', appointment } });
+  const wide = span('sat', '09:00', '17:00');
+  const preferredCover = { ...span('sat', '10:00', '12:00'), preferred: true };
+  const preferredPartial = { ...span('sat', '11:00', '12:00'), preferred: true };
+  const query = (availability: ActivityQuery['availability']): ActivityQuery => ({
+    practiceKey: 'walk',
+    geoScopeId: 'geo:city:marseille',
+    timezone: PARIS,
+    availability,
+  });
+
+  it('marks a fixed appointment preferred when a preferred interval covers it, in either order', () => {
+    expect(matchActivity(query([wide, preferredCover]), scheduled, NOW).overlapIsPreferred).toBe(true);
+    expect(matchActivity(query([preferredCover, wide]), scheduled, NOW).overlapIsPreferred).toBe(true);
+  });
+
+  it('does not count a preferred interval that covers only part of the appointment', () => {
+    const match = matchActivity(query([wide, preferredPartial]), scheduled, NOW);
+    expect(match.verdict).toBe('compatible');
+    expect(match.overlapIsPreferred).toBe(false);
+  });
+
+  it('applies the same rule to a start-only signal', () => {
+    const startOnly = activity({ signalId: 'sig-start', timing: { kind: 'start_only', start: at('sat', '10:30') } });
+    expect(matchActivity(query([wide, preferredCover]), startOnly, NOW).overlapIsPreferred).toBe(true);
+    expect(matchActivity(query([preferredCover, wide]), startOnly, NOW).overlapIsPreferred).toBe(true);
+    const later = { ...span('sat', '11:00', '12:00'), preferred: true };
+    expect(matchActivity(query([wide, later]), startOnly, NOW).overlapIsPreferred).toBe(false);
+  });
+});

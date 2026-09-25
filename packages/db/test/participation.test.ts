@@ -413,3 +413,95 @@ describe('R2 — existing membership never bypasses current eligibility', () => 
     ).toBe('blocked');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review 5320398217, thread 4106808145 (P1): accepting an Ask/Offer response
+// must revalidate the responder's current eligibility before any write.
+// ---------------------------------------------------------------------------
+
+describe('P1 — accepting an Ask or Offer revalidates current eligibility', () => {
+  async function expireSignal(signalId: string): Promise<void> {
+    const signal = await ports.repo.getSignal(signalId);
+    if (signal === null) throw new Error('missing signal');
+    await ports.repo.putSignal({ ...signal, expiresAt: '2000-01-01T00:00:00.000Z' });
+  }
+
+  it('refuses after the signal closed, and writes nothing', async () => {
+    const signalId = await hostedSignal('offer');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await closeSignal(ports, { hostId: DEMO_USERS.lea, signalId });
+
+    const before = await snapshot(signalId);
+    expect(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' })).toEqual({
+      ok: false,
+      reason: 'signal_not_open',
+    });
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses after the signal expired, and writes nothing', async () => {
+    const signalId = await hostedSignal('ask');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await expireSignal(signalId);
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'signal_not_open',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses a responder the host excluded from that signal, and opens no thread', async () => {
+    const signalId = await hostedSignal('offer');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await removeParticipant(ports, { hostId: DEMO_USERS.lea, signalId, userId: DEMO_USERS.hugo, exclude: true });
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'host_excluded',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses a responder suspended since responding, and writes nothing', async () => {
+    const signalId = await hostedSignal('offer');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await suspend(DEMO_USERS.hugo);
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'account_suspended',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses a repeated acceptance once the signal closed, and leaves the existing conversation intact', async () => {
+    const signalId = await hostedSignal('offer');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    const first = await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' });
+    if (!first.ok || first.value.threadId === null) throw new Error('thread not opened');
+    await closeSignal(ports, { hostId: DEMO_USERS.lea, signalId });
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'signal_not_open',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+    const thread = await ports.repo.getThread(first.value.threadId);
+    expect(thread?.state).toBe('open');
+  });
+
+  it('still keeps the age rule for the private thread', async () => {
+    const signalId = await hostedSignal('offer');
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    const hugo = await ports.repo.getPerson(DEMO_USERS.hugo);
+    if (hugo === null) throw new Error('missing person');
+    await ports.repo.putPerson({ ...hugo, ageBand: 'minor_15_17' });
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'age_band_mismatch',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+});

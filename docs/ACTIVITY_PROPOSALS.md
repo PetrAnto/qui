@@ -261,6 +261,8 @@ Runtime participation fixes. These restrict; they do not widen:
   stops a place being counted twice; it never bypasses suspension, blocks,
   exclusion, audience or signal lifecycle. `joinSignal` applies the same rule
   to a member retrying a join.
+  Accepting an Ask or Offer is revalidated the same way (`canRespondToSignal`,
+  then `canOpenScopedThread` for the age-band rule), repeats included.
   - Accepting into a Join or Event runs the same `canJoinEvent` check as a
     direct join: live signal, block, host exclusion, audience, capacity.
   - Accepting an Ask or Offer runs `canOpenScopedThread` before the response

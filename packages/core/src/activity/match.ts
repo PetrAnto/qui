@@ -134,14 +134,28 @@ export interface ActivityMatch {
   readonly preferencesMet: number;
 }
 
-/** Lower-case, accent-free, hyphenated: "Paddle Board" and "paddle-board" are one key. */
+/**
+ * One key per practice, in any script: "Paddle Board" and "paddle-board" are
+ * one key, and so are the composed and decomposed spellings of the same word.
+ *
+ * - Compatibility forms are folded (full-width "ＹＯＧＡ" is "yoga").
+ * - Accents are dropped from Latin letters only ("Randonnée" is "randonnee").
+ *   Elsewhere a combining mark is part of the word — が is not か and योग is
+ *   not यग — so it is kept.
+ * - Letters, marks and numbers of every script survive; anything else becomes
+ *   a single hyphen.
+ *
+ * The result can be empty (punctuation-only input). An empty key means "no
+ * practice stated", and matching never treats two empty keys as the same
+ * activity.
+ */
 export function normalizePracticeKey(practice: string): string {
   return practice
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+    .normalize('NFKD')
+    .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
+    .normalize('NFC')
     .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
 }
 
@@ -181,16 +195,17 @@ function evaluateTime(query: ActivityQuery, activity: ActivityDescriptor, zone: 
     if (toMs(timing.start) <= toMs(now)) {
       return settled({ criterion: 'time', outcome: 'unmet', mandatory, text: 'Already started' });
     }
-    const fits = wanted.find(
+    const fitting = wanted.filter(
       (interval) => toMs(interval.start) <= toMs(timing.start) && toMs(timing.start) < toMs(interval.end),
     );
     const label = formatInstant(timing.start, zone);
-    return fits === undefined
+    // Preferred if *any* fitting interval is preferred, whatever the order.
+    return fitting.length === 0
       ? settled({ criterion: 'time', outcome: 'unmet', mandatory, text: `Starts ${label}, outside your times` })
       : settled(
           { criterion: 'time', outcome: 'unknown', mandatory, text: `Starts ${label}; end time not given` },
           null,
-          fits.preferred === true,
+          fitting.some((interval) => interval.preferred === true),
         );
   }
 
@@ -200,12 +215,14 @@ function evaluateTime(query: ActivityQuery, activity: ActivityDescriptor, zone: 
     if (toMs(appointment.start) <= toMs(now)) {
       return settled({ criterion: 'time', outcome: 'unmet', mandatory, text: `${label} has already started` });
     }
-    const fits = wanted.find((interval) => covers(interval, appointment));
-    if (fits !== undefined) {
+    const covering = wanted.filter((interval) => covers(interval, appointment));
+    if (covering.length > 0) {
+      // Preferred only if a preferred interval covers the whole appointment;
+      // a preferred interval that overlaps part of it does not count.
       return settled(
         { criterion: 'time', outcome: 'met', mandatory, text: `Fixed for ${label}, within your times` },
         appointment,
-        fits.preferred === true,
+        covering.some((interval) => interval.preferred === true),
       );
     }
     const partial = wanted.some((interval) => overlapOf(interval, appointment) !== null);
@@ -367,9 +384,12 @@ export function matchActivity(query: ActivityQuery, activity: ActivityDescriptor
   }
 
   const wantedPractice = normalizePracticeKey(query.practiceKey);
-  if (activity.practiceKey === null) {
+  const activityPractice = activity.practiceKey === null ? '' : normalizePracticeKey(activity.practiceKey);
+  if (wantedPractice === '') {
+    reasons.push({ criterion: 'practice', outcome: 'unknown', mandatory: true, text: 'No activity type in the search' });
+  } else if (activityPractice === '') {
     reasons.push({ criterion: 'practice', outcome: 'unknown', mandatory: true, text: 'Activity type not stated' });
-  } else if (normalizePracticeKey(activity.practiceKey) === wantedPractice) {
+  } else if (activityPractice === wantedPractice) {
     reasons.push({ criterion: 'practice', outcome: 'met', mandatory: true, text: `Same activity: ${wantedPractice}` });
   } else {
     reasons.push({ criterion: 'practice', outcome: 'unmet', mandatory: true, text: 'Different activity' });
