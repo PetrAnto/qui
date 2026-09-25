@@ -9,6 +9,7 @@ import { GET as searchCities, POST as addCity } from '../app/api/cities/route';
 import { GET as insights } from '../app/api/insights/route';
 import { POST as report } from '../app/api/reports/route';
 import { POST as createSignal } from '../app/api/signals/route';
+import { POST as join, PUT as reportOutcome } from '../app/api/signals/[id]/join/route';
 import { POST as respond } from '../app/api/signals/[id]/respond/route';
 import { POST as setSession } from '../app/api/session/route';
 import { getStore, resetStore } from '../lib/store';
@@ -162,6 +163,41 @@ describe('policy is enforced at the API boundary, not only in the UI', () => {
     );
     expect(attempt.status).toBe(403);
     expect((await attempt.json()) as { reason: string }).toEqual({ reason: 'age_band_mismatch' });
+  });
+
+  it('refuses an outcome report from an account that was not part of the signal', async () => {
+    const created = await createSignal(
+      request('/api/signals', {
+        method: 'POST',
+        as: DEMO_USERS.lea,
+        body: JSON.stringify({
+          type: 'event',
+          title: 'Beach clean-up',
+          body: 'Bags provided.',
+          geoScopeId: CITY_IDS.ajaccio,
+        }),
+      }),
+    );
+    const { signalId } = (await created.json()) as { signalId: string };
+    const context = { params: Promise.resolve({ id: signalId }) };
+
+    const stranger = await reportOutcome(
+      request(`/api/signals/${signalId}/join`, { method: 'PUT', as: DEMO_USERS.tom }),
+      context,
+    );
+    expect(stranger.status).toBe(403);
+    expect((await stranger.json()) as { reason: string }).toEqual({ reason: 'not_participant' });
+
+    const joined = await join(
+      request(`/api/signals/${signalId}/join`, { method: 'POST', as: DEMO_USERS.hugo }),
+      context,
+    );
+    expect(joined.status).toBe(201);
+    const participant = await reportOutcome(
+      request(`/api/signals/${signalId}/join`, { method: 'PUT', as: DEMO_USERS.hugo }),
+      context,
+    );
+    expect(participant.status).toBe(200);
   });
 
   it('refuses to publish into a city the account has no tie to', async () => {

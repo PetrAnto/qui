@@ -1,0 +1,304 @@
+# Activity proposals — requirements, corrected design and open policy amendments
+
+This page keeps three things apart, because they carry different authority:
+
+1. **Owner product requirements.** Stated by the product owner. They are the
+   target, but they do not by themselves change any `LOCKED` rule or `INV-*`
+   invariant.
+2. **Proposed technical and policy decisions.** **Status: HYPOTHESIS.** Written
+   by an agent to meet those requirements. None is owner-approved and none is
+   an ADR.
+3. **What exists in code today.**
+
+"Anyone may propose" is a product requirement. It is **not** authorization to
+weaken an age, block, locality or messaging rule. Where a requirement meets a
+locked rule, the rule stands until an owner decision and, where required, a
+superseding ADR say otherwise.
+
+---
+
+## 1. Owner product requirements
+
+**Search becomes a proposal.**
+- A person searches by activity, area, availability and optional criteria.
+- QUI shows compatible existing activities. From the same inputs, it prepares
+  a publishable proposal, without asking for a second form.
+- This works even when nothing matches.
+- Each published proposal represents a real person's intention.
+
+**Explicit publication, with inputs preserved.** The required flow is:
+
+```text
+search ──► compatible results ──► prefilled proposal ──► one explicit "Publish"
+              │                                                ▲
+              └── sign-in / account creation if needed ────────┘
+                  (every input survives: activity, area, availability,
+                   criteria, equipment, costs)
+```
+
+- Searching never publishes and never joins. The same holds for a future
+  agent connector.
+- Authentication in the middle of the flow must not lose or silently change
+  any input.
+
+**One activity through its whole life.**
+- There is no separate "request" to convert later.
+- A proposal may exist before a date, a full group, equipment or an organizer
+  is agreed.
+- Existing Signal intents and the wider social product are kept.
+
+**Flexible criteria and availability.**
+- Precise dates and broader availability are both supported, with several
+  possible windows.
+- Mandatory constraints are kept distinct from preferences.
+- Overlapping availability is not a confirmed appointment.
+
+**Anyone can originate a proposal.** Proposing an intention, participating,
+and accepting responsibility as host are distinct actions. Each keeps its own
+age and locality rules.
+
+**Equipment, only when necessary.**
+- For equipment-dependent activities, show:
+  - required items and quantities;
+  - what has been contributed;
+  - what is still missing.
+- Participants add and update their own contributions.
+- Personal-use items are kept distinct from items available to others, and a
+  suggested rental from confirmed availability.
+- Availability is tied to dates, and coverage is recalculated when dates,
+  participants or contributions change.
+- Activities stay discoverable while equipment is missing.
+- A walk never gets an equipment form.
+- A declared item is never presented as a safety certification.
+
+**Free core.**
+- Searching, proposing, joining, coordinating, and declaring equipment or
+  shared costs stay free.
+- Later optional payments, reservations, commissions and professional tools
+  must preserve equal organic standing.
+- The first implementation has no payment integration and holds no money.
+
+**Future agent entry point (Muse).**
+- It follows the same flow (search → results → confirmed proposal) and reuses
+  QUI's services and permissions.
+- Nothing assumes listing approval, guaranteed recommendations or a
+  notification integration.
+
+---
+
+## 2. Proposed technical design (HYPOTHESIS)
+
+1. **Availability keeps each person's real intervals and their time zone.**
+   Nothing is reduced to a yes/no against someone else's window.
+   - A *proposed* activity needs an overlap at least as long as its duration.
+   - A *scheduled* activity needs one declared interval that contains the
+     whole appointment.
+   - Moving a date re-checks every declaration. Nobody is confirmed for a time
+     they did not name.
+
+2. **Equipment has two separate dimensions.**
+   - *Use*: `own_use` (serves only its owner, up to their own need) or
+     `shareable`.
+   - *Status*:
+     - `suggested` — an unresolved option, such as a rental hut;
+     - `offered` — for example "I can book a court"; pending;
+     - `confirmed` — the person confirms it for stated times.
+   - **Only `confirmed` counts**, and only for an interval it fully covers.
+   - A required court reservation is met only by a confirmed booking for that
+     interval.
+   - Each contribution counts once, and only from someone in the activity.
+   - Missing equipment is reported and never hides an activity.
+   - An activity with no needs has no equipment state.
+   - There is no `verified` or `safe` field.
+
+   **Dates on a contribution (future UI):** when someone adds or confirms an
+   item, its availability is **prefilled from that person's declared
+   availability intervals**. They confirm or adjust it before saving. Stored
+   intervals are exactly what they confirmed.
+
+   When the activity's date moves, a contribution is never extended to the new
+   date. It counts again only if its confirmed intervals already contain the
+   new time. Otherwise the item shows as "not confirmed for the new time" and
+   its owner is asked to re-confirm.
+
+   A `confirmed` contribution with no dates counts for nothing. The UI must
+   therefore require dates at confirmation.
+
+   **Overlap vs candidate interval (implemented).** For a *proposed* activity,
+   the possible overlap between someone's times and the activity (`overlap`)
+   can be longer than the activity itself. Equipment is judged against an
+   activity-length **candidate interval** inside that overlap: the one the
+   confirmed declarations cover best, which need not be the earliest.
+
+   Example: a 120-minute activity, an overlap of 14:00–18:00 and a board
+   confirmed for 15:00–17:00 give the candidate 15:00–17:00, which is covered.
+
+   The candidate is **not an appointment**; the wording stays "if it runs …".
+   No availability is invented: an interval that no single declaration
+   contains is not covered. For a *scheduled* activity, the candidate is the
+   whole appointment and equipment must cover all of it.
+
+3. **Discovery and joining are separate.**
+   - Matching takes no viewer and grants nothing.
+   - Visibility projection is applied before activities are passed in.
+   - Joining stays with `canJoinEvent`.
+   - Match input and output carry no free text and no participant ids.
+   - Anonymous discovery must not require a join capability.
+
+4. **Existing Join and Event signals are matched, not dropped.**
+   `describeSignal` gives them:
+   - `start_only` timing;
+   - unknown cost and unknown level;
+   - no equipment state;
+   - unknown organizer participation.
+
+   Anything unknown yields `unconfirmed`, never a claimed match.
+
+5. **Budget.**
+   - A numeric per-person ceiling with a currency sits alongside the free /
+     shared-cost preference.
+   - These never satisfy a mandatory ceiling: an unknown cost, an unsettled
+     split, or a cost in another currency.
+   - Known and estimated costs are labelled differently.
+   - Shares are rounded up.
+
+6. **Participation is explicit.**
+   - The organizer counts once if taking part, and not at all otherwise: no
+     place and no personal equipment need, though they may lend.
+   - Historical `capacity` keeps its meaning, places for people other than the
+     host (`excludes_organizer`).
+
+7. **Draft preservation (future UI).**
+   - The draft lives client-side (URL parameters plus session storage) across
+     sign-in.
+   - The server keeps no anonymous draft.
+   - Publishing is one explicit, authenticated request built from the
+     preserved draft.
+
+---
+
+## 3. Proposed policy amendments (HYPOTHESIS — owner decisions required)
+
+| # | Rule | Proposed exact change | Kind |
+|---|---|---|---|
+| P1 | `INV-HOST-2` / ADR-0010: host power "is granted only to that object's creator" | "…granted only to that object's **designated host**: one adult with a local tie to that place, confirmed by the proposer. A proposal with no designated host has no host powers." | LOCKED text |
+| P2 | `INV-DM-1` / ADR-0012: a thread exists only after an accepted response to a live signal | Add a second thread kind: "An activity group thread exists only as a consequence of joining a live Join activity; its members are that activity's members; nothing opens it from a profile, handle or user id." | LOCKED text |
+| P3 | `INV-AGE-2`: cross-band contact only "in hosted group contexts, where a host is present" | Define it as: "a designated adult host is a member **and** the group has at least three members. Otherwise the space is read-only for cross-band writing." | LOCKED text (tightening) |
+| P4 | `INV-BLOCK-1`: "an existing thread freezes" | See below. | LOCKED text |
+| P5 | `createSignal` requires `host` (18+, local tie) for any Join | See below. | Policy amendment, **proposed** |
+| P6 | Proposals originated by minors | Visible and joinable only within the 15–17 band, with no adult host. For real users, gated on an age-threshold attestation. | Privacy / permissions |
+| P7 | Participant list visibility | Identities visible to members and host only; everyone else sees counts and coverage. This changes current Join/Event pages. | Privacy |
+
+### P4 — blocks inside a group activity (proposed)
+
+Keep "the thread freezes" for two-person threads. For group activities:
+
+1. **Before joining.** A join is refused when a block exists, in either
+   direction, between the joiner and any current member. The reason is
+   generic: `unavailable`, not `blocked`.
+2. **After both have joined.**
+   - Each person is removed from the other's view: messages, participant list
+     and contributions.
+   - The thread is not frozen for everyone else.
+   - The **blocker** receives a **private notice**: "someone you have blocked
+     is part of this activity". The blocked person receives nothing.
+   - The notice comes with a **one-step withdrawal option**: leaving the
+     activity, with the person's own contributions withdrawn. Taking it never
+     reveals the reason to anyone.
+3. **What this does not do.**
+   - Filtering removes someone from a screen, not from a place. Two people who
+     blocked each other may still both turn up at the same real-world
+     activity. QUI cannot prevent physical co-attendance and must not claim to
+     separate them.
+   - A generic refusal reduces disclosure, but it cannot make group membership
+     impossible to infer. A person refused from one activity and accepted into
+     others can narrow down who is present, especially in a small group or a
+     small town.
+   - The rule lowers the signal; it does not remove it. Nothing here is
+     presented as a guarantee of separation.
+
+### P5 — who may propose (proposed)
+
+1. **Proposing** a hostless Join requires:
+   - an active account with `publish` (verified email);
+   - **any** attachment to that city, including `exploring` or `visitor`.
+
+   This is how a visitor can propose paddleboarding in a city they are only
+   exploring. Today, `ask` and `offer` already accept any attachment; the
+   `publish` requirement is a tightening.
+2. **Hosting** keeps its existing, separate requirements, unchanged: the
+   `host` capability (18+ and a local tie to that city, ADR-0002 and
+   ADR-0003). An exploring attachment never qualifies someone to host.
+3. **Participating** keeps today's rules (`respond_to_unknown_people`,
+   `canJoinEvent`).
+4. A hostless proposal has no host powers and no response-approval path until a
+   host is designated (P1).
+
+Until this is approved, `createSignal` keeps requiring `host` for every Join
+and Event, exactly as it does today.
+
+---
+
+## 4. What exists in code
+
+| Piece | File | State |
+|---|---|---|
+| Time intervals with zone context, per-person availability declarations | `activity/interval.ts` | pure, tested |
+| Participation (organizer vs participants), capacity semantics, availability for an appointment or a window | `activity/participation.ts` | pure, tested |
+| Declared cost: free / known / estimated / unknown, per-person ceiling | `activity/cost.ts` | pure, tested |
+| Equipment needs, contributions, interval-specific coverage | `activity/equipment.ts` | pure, tested |
+| Compatibility with reasons, deterministic ordering | `activity/match.ts` | pure, tested |
+| Honest description of existing Join/Event signals | `activity/describe.ts` | pure, tested |
+
+These modules are not exported from the package root. They are not wired into
+any route, service, repository or UI, and they change no permission.
+
+Runtime participation fixes. These restrict; they do not widen:
+
+- `decideResponse` validates before its first write, and **every** acceptance
+  is revalidated against current eligibility: a repeat acceptance, and a
+  responder who already joined directly, included. Existing membership only
+  stops a place being counted twice; it never bypasses suspension, blocks,
+  exclusion, audience or signal lifecycle. `joinSignal` applies the same rule
+  to a member retrying a join.
+  Accepting an Ask or Offer is revalidated the same way (`canRespondToSignal`,
+  then `canOpenScopedThread` for the age-band rule), repeats included.
+  - Accepting into a Join or Event runs the same `canJoinEvent` check as a
+    direct join: live signal, block, host exclusion, audience, capacity.
+  - Accepting an Ask or Offer runs `canOpenScopedThread` before the response
+    is marked accepted.
+- Repeating a decision has no second effect. Accepting a withdrawn response,
+  or declining an accepted one, is a `conflict`. Joining twice creates no
+  duplicate row.
+- Outcome reports are restricted by `canReportOutcome`, recorded as
+  **`INV-OUTCOME-1`** in [SAFETY.md](SAFETY.md).
+  - For a Join or Event, only current membership counts: an old accepted
+    response does not survive removal or exclusion.
+  - For an Ask or Offer, an accepted responder still qualifies unless the host
+    excluded them.
+  - Reports remain self-reports. No attendance verification exists.
+
+---
+
+## 5. Correction for future connector work
+
+A stateless signed draft token proves integrity and expiry, **not single
+use**. Without server-side state it can be replayed until it expires. Single
+use needs one of:
+
+- a nonce or token id stored when first consumed, checked atomically before
+  publishing or joining, and kept until the token's expiry;
+- an idempotency key derived from the user and the draft hash, enforced by a
+  unique constraint.
+
+A token also never replaces the human confirmation inside QUI.
+
+## 6. Not done here, deliberately
+
+- No UI, route or connector.
+- No group messaging, host delegation or `minors_only` audience.
+- No change to who may create a Join or Event.
+- No new analytics events, no attendance confirmation, no reporting subsystem.
+- No schema migration, and no persistence of plans, availability or
+  contributions.
+- No payments, custody or partner surfaces.
