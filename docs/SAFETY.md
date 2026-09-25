@@ -5,7 +5,7 @@ trade against features. Weakening one requires a superseding ADR and a recorded
 product-owner decision — not a pull request.
 
 Each `INV-` identifier below corresponds to a `describe()` block in
-`packages/core/test/safety-invariants.test.ts` (38 tests). CI runs them twice:
+`packages/core/test/safety-invariants.test.ts` (41 tests). CI runs them twice:
 once inside the full suite, and once as a separate named gate
 (`pnpm test:safety`), so that a failure is legible as *a safety failure* rather
 than as one red line among many.
@@ -69,6 +69,15 @@ to watch, which is the exact failure the button exists to prevent.
 | `INV-HOST-2` | Host power is local to the hosted object. It is granted only to that object's creator, it does not follow the excluded person anywhere else, and it never becomes moderation. | `policy/interaction.ts` |
 | `INV-MOD-1` | Moderation material is private to the moderation function. A report is visible to its author and to moderators — never to the reported person. Machine triage labels may be attached; they never decide. | `policy/access.ts`, `services/write.ts` |
 | `INV-SUSPEND-1` | A suspended account and its content disappear and it can respond to nothing; it retains read access to its own state so it can appeal. A `distribution_restricted` account keeps its voice but loses amplification — out of others' feeds and out of people discovery, still visible to its author. | `policy/capabilities.ts`, `policy/access.ts` |
+
+### Real-world outcomes
+
+| ID | Rule | Enforced in |
+|---|---|---|
+| `INV-OUTCOME-1` | "It actually happened" can be reported only by someone who was part of the signal: its host (creator), a participant in state `joined`, or a responder whose response the host accepted. An unrelated account, a pending, declined or withdrawn responder, a removed participant, a moderator acting as such, and a suspended account cannot report one, and a removed signal accepts none. A report is a **self-report**: it never records verified attendance and no capability derives from it. | `policy/interaction.ts` (`canReportOutcome`), `services/write.ts` (`recordLocalOutcome`) |
+
+The local outcome is the metric the product exists to move, which is exactly why
+a stranger must not be able to add to it.
 
 ### Identity and credentials
 

@@ -17,6 +17,7 @@ import {
   canExerciseHostPower,
   canJoinEvent,
   canOpenScopedThread,
+  canReportOutcome,
   canRespondToSignal,
   canSendMessage,
   visibleParticipants,
@@ -519,6 +520,41 @@ describe('INV-SUSPEND-1 suspended and restricted accounts respect policy', () =>
     const host = actor('host');
     expect(canRespondToSignal(suspended, signal('s1', 'host'), host, graph, NOW).reason).toBe(
       'account_suspended',
+    );
+  });
+});
+
+describe('INV-OUTCOME-1 only people who were part of a signal can report its outcome', () => {
+  const host = actor('host');
+  const event = signal('s1', host.id, 'event');
+  const none = { joined: false, acceptedResponse: false };
+
+  it('refuses an unrelated account, including a moderator acting as one', () => {
+    expect(canReportOutcome(actor('stranger'), event, none)).toEqual({
+      allowed: false,
+      reason: 'not_participant',
+    });
+    expect(canReportOutcome(actor('moderator', { role: 'moderator' }), event, none).reason).toBe(
+      'not_participant',
+    );
+  });
+
+  it('accepts exactly the host, a joined participant and an accepted responder', () => {
+    expect(canReportOutcome(host, event, none).allowed).toBe(true);
+    expect(canReportOutcome(actor('guest'), event, { joined: true, acceptedResponse: false }).allowed).toBe(true);
+    const offer = signal('s2', host.id, 'offer');
+    expect(
+      canReportOutcome(actor('responder'), offer, { joined: false, acceptedResponse: true }).allowed,
+    ).toBe(true);
+  });
+
+  it('refuses a suspended account and a removed signal even for its own members', () => {
+    const suspended = actor('guest', { accountState: 'suspended' });
+    expect(canReportOutcome(suspended, event, { joined: true, acceptedResponse: false }).reason).toBe(
+      'account_suspended',
+    );
+    expect(canReportOutcome(host, signal('s3', host.id, 'event', { state: 'removed' }), none).reason).toBe(
+      'content_removed',
     );
   });
 });

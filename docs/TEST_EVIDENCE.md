@@ -6,44 +6,56 @@ updated, not trusted indefinitely.
 
 Recorded: **2026-08-16**, on Linux, Node >= 22.12, pnpm 10.33, vitest 3.2.7.
 Updated: **2026-08-19** (counts re-run on `0692bc1`; live-deploy correction).
+Updated: **2026-09-25** (branch `feat/activity-foundations`: participation
+fixes, `INV-OUTCOME-1`, pure activity modules; counts below re-run on that
+branch, Node 22.23.1, `vitest run --maxWorkers=1`).
 
 ## Unit and integration suite — PASSING
 
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  16 passed (16)
-     Tests  177 passed (177)
-  Duration  ~4s
+Test Files  19 passed (19)
+     Tests  247 passed (247)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 38 |
+| core | `test/safety-invariants.test.ts` | 41 |
+| core | `test/activity.test.ts` | 32 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
+| db | `test/d1.test.ts` | 18 |
 | db | `test/flows.test.ts` | 16 |
+| db | `test/participation.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
-| web | `test/api.test.ts` | 12 |
-| web | `test/ui.test.ts` | 12 |
+| web | `test/ui.test.ts` | 14 |
+| web | `test/api.test.ts` | 13 |
 | web | `test/landing-hero.test.ts` | 6 |
-| web | `test/search-sequence.test.ts` | 5 |
+| web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
+
+`test/activity.test.ts` covers pure functions that are not yet wired into any
+route or UI ([ACTIVITY_PROPOSALS.md](ACTIVITY_PROPOSALS.md)). The exact commit
+these counts were verified on is recorded in the pull request that introduces
+this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **38
-tests** covering the 17 invariants listed in [SAFETY.md](SAFETY.md):
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **41
+tests** in `safety-invariants.test.ts` cover the 18 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
-`INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-ANALYTICS-1`,
-`INV-DEMO-1`, `INV-CACHE-1`.
+`INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`,
+`INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
+`INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
+`analytics.test.ts`, so the gate reports more than 41.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -58,6 +70,12 @@ runs from before the implementation existed:
 
 These are kept because a test suite that has only ever been observed green is
 not evidence that it tests anything.
+
+2026-09-25: the 13 tests in `packages/db/test/participation.test.ts` were run
+against `main`'s `services/write.ts` before the fix: **11 failed, 2 passed**.
+The 2 that pass assert behaviour the fix must keep: the host, joined
+participants and accepted responders can still report an outcome, and a
+responder who already joined is not counted twice.
 
 ## End-to-end suite — PASSING
 
