@@ -172,9 +172,14 @@ describe('searching publishes nothing and joins nothing', () => {
       attachments: await ports.repo.listAttachments(DEMO_USERS.marc),
     });
     const before = JSON.parse(JSON.stringify(await snapshot()));
+    const placesBefore = new Set((await ports.repo.listGeoScopes()).map((scope) => scope.id));
     await search(DEMO_USERS.marc, PADDLE);
     await search(DEMO_USERS.marc, { practice: 'padel', geoScopeId: CITY_IDS.montpellier });
     await search(DEMO_USERS.marc, { practice: 'ヨガ', geoScopeId: TOKYO });
     expect(JSON.parse(JSON.stringify(await snapshot()))).toEqual(before);
+    // The only thing that may change is public reference data: the worldwide
+    // city row the repository caches on first lookup. Nothing about a person.
+    const added = (await ports.repo.listGeoScopes()).map((scope) => scope.id).filter((id) => !placesBefore.has(id));
+    expect(added.every((id) => id === TOKYO)).toBe(true);
   });
 });

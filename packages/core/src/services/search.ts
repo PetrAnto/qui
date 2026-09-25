@@ -18,9 +18,11 @@ import { listSignals, type SignalCard } from './read';
 /**
  * Activity search: "I want to do X, in this city, at these times".
  *
- * Read-only by construction. It publishes nothing, joins nothing, and records
- * nothing — there is no analytics event for a search (INV-ANALYTICS-1 is a
- * closed vocabulary) and no write of any kind.
+ * It publishes nothing, joins nothing, and writes nothing about any person —
+ * there is no analytics event for a search (INV-ANALYTICS-1 is a closed
+ * vocabulary). The one write it can cause is the repository lazily caching a
+ * public place row the first time a worldwide city is looked up, exactly as the
+ * Signals list and the city switcher already do.
  *
  * Visibility is not re-derived here. Candidates are exactly the signals the
  * Signals list already shows this viewer (`listSignals`: removed content,

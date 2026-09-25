@@ -256,7 +256,9 @@ and Event, exactly as it does today.
 
 **Search, results and preview (synthetic demo).**
 
-- The search reads only: no publish, join, response or analytics event.
+- The search writes nothing about any person: no publish, join, response or
+  analytics event. Its only write is caching a public place row the first
+  time a worldwide city is looked up, as city switching already does.
 - Its candidates are exactly what the Signals list already shows the viewer
   (`listSignals`), so blocks and adult-only audiences are removed *before*
   matching. Only open Join/Event signals are matched.
