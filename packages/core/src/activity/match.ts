@@ -113,11 +113,23 @@ export interface ActivityMatch {
   readonly signalId: SignalId;
   readonly verdict: Verdict;
   readonly reasons: readonly MatchReason[];
-  /** The time this person could actually do it, when one is known. */
-  readonly slot: Interval | null;
-  readonly slotIsPreferred: boolean;
+  /**
+   * The possible overlap between this person's times and the activity: for a
+   * proposed activity, the whole shared window (it can be longer than the
+   * activity); for a scheduled one, the appointment itself. Never an
+   * appointment in its own right.
+   */
+  readonly overlap: Interval | null;
+  readonly overlapIsPreferred: boolean;
+  /**
+   * One activity-length interval inside `overlap`, used to judge equipment.
+   * For a proposed activity it is the interval confirmed equipment covers
+   * best — not necessarily the earliest — and it is a candidate, not a fixed
+   * time. For a scheduled activity it is the whole appointment.
+   */
+  readonly candidate: Interval | null;
   readonly placesLeft: number | null;
-  /** Coverage for `slot`; null when the activity has no equipment needs or no slot. */
+  /** Coverage for `candidate`; null when the activity has no equipment needs or no candidate. */
   readonly equipment: EquipmentCoverage | null;
   readonly preferencesMet: number;
 }
@@ -133,10 +145,27 @@ export function normalizePracticeKey(practice: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-interface TimeResult {
-  readonly reason: MatchReason;
-  readonly slot: Interval | null;
+interface TimeOption {
+  readonly overlap: Interval;
   readonly preferred: boolean;
+}
+
+/**
+ * `settled`: the time question is answered outright — a fixed appointment, an
+ * unknown time, or no fit. `flexible`: one or more overlaps are long enough;
+ * which one to show is decided together with equipment in `matchActivity`.
+ */
+type TimeResult =
+  | {
+      readonly kind: 'settled';
+      readonly reason: MatchReason;
+      readonly overlap: Interval | null;
+      readonly preferred: boolean;
+    }
+  | { readonly kind: 'flexible'; readonly options: readonly TimeOption[]; readonly neededMinutes: number };
+
+function settled(reason: MatchReason, overlap: Interval | null = null, preferred = false): TimeResult {
+  return { kind: 'settled', reason, overlap, preferred };
 }
 
 function evaluateTime(query: ActivityQuery, activity: ActivityDescriptor, zone: string, now: Instant): TimeResult {
@@ -145,70 +174,53 @@ function evaluateTime(query: ActivityQuery, activity: ActivityDescriptor, zone: 
   const timing = activity.timing;
 
   if (timing.kind === 'unknown') {
-    return {
-      reason: { criterion: 'time', outcome: 'unknown', mandatory, text: 'No time given yet' },
-      slot: null,
-      preferred: false,
-    };
+    return settled({ criterion: 'time', outcome: 'unknown', mandatory, text: 'No time given yet' });
   }
 
   if (timing.kind === 'start_only') {
     if (toMs(timing.start) <= toMs(now)) {
-      return { reason: { criterion: 'time', outcome: 'unmet', mandatory, text: 'Already started' }, slot: null, preferred: false };
+      return settled({ criterion: 'time', outcome: 'unmet', mandatory, text: 'Already started' });
     }
     const fits = wanted.find(
       (interval) => toMs(interval.start) <= toMs(timing.start) && toMs(timing.start) < toMs(interval.end),
     );
     const label = formatInstant(timing.start, zone);
     return fits === undefined
-      ? {
-          reason: { criterion: 'time', outcome: 'unmet', mandatory, text: `Starts ${label}, outside your times` },
-          slot: null,
-          preferred: false,
-        }
-      : {
-          reason: {
-            criterion: 'time',
-            outcome: 'unknown',
-            mandatory,
-            text: `Starts ${label}; end time not given`,
-          },
-          slot: null,
-          preferred: fits.preferred === true,
-        };
+      ? settled({ criterion: 'time', outcome: 'unmet', mandatory, text: `Starts ${label}, outside your times` })
+      : settled(
+          { criterion: 'time', outcome: 'unknown', mandatory, text: `Starts ${label}; end time not given` },
+          null,
+          fits.preferred === true,
+        );
   }
 
   if (timing.kind === 'scheduled') {
     const appointment = timing.appointment;
     const label = formatInterval(appointment, zone);
     if (toMs(appointment.start) <= toMs(now)) {
-      return { reason: { criterion: 'time', outcome: 'unmet', mandatory, text: `${label} has already started` }, slot: null, preferred: false };
+      return settled({ criterion: 'time', outcome: 'unmet', mandatory, text: `${label} has already started` });
     }
     const fits = wanted.find((interval) => covers(interval, appointment));
     if (fits !== undefined) {
-      return {
-        reason: { criterion: 'time', outcome: 'met', mandatory, text: `Fixed for ${label}, within your times` },
-        slot: appointment,
-        preferred: fits.preferred === true,
-      };
+      return settled(
+        { criterion: 'time', outcome: 'met', mandatory, text: `Fixed for ${label}, within your times` },
+        appointment,
+        fits.preferred === true,
+      );
     }
     const partial = wanted.some((interval) => overlapOf(interval, appointment) !== null);
-    return {
-      reason: {
-        criterion: 'time',
-        outcome: 'unmet',
-        mandatory,
-        text: partial
-          ? `Fixed for ${label}; you are free for only part of it`
-          : `Fixed for ${label}, outside your times`,
-      },
-      slot: null,
-      preferred: false,
-    };
+    return settled({
+      criterion: 'time',
+      outcome: 'unmet',
+      mandatory,
+      text: partial
+        ? `Fixed for ${label}; you are free for only part of it`
+        : `Fixed for ${label}, outside your times`,
+    });
   }
 
   const needed = Math.max(timing.durationMinutes, query.minimumMinutes ?? 0);
-  const candidates: { overlap: Interval; preferred: boolean }[] = [];
+  const options: TimeOption[] = [];
   let longest = 0;
   for (const window of timing.windows) {
     const ahead = futurePart(window, now);
@@ -218,41 +230,21 @@ function evaluateTime(query: ActivityQuery, activity: ActivityDescriptor, zone: 
       if (overlap === null) continue;
       const minutes = minutesOf(overlap);
       longest = Math.max(longest, minutes);
-      if (minutes >= needed) candidates.push({ overlap, preferred: interval.preferred === true });
+      if (minutes >= needed) options.push({ overlap, preferred: interval.preferred === true });
     }
   }
-  candidates.sort(
-    (a, b) =>
-      Number(b.preferred) - Number(a.preferred) ||
-      toMs(a.overlap.start) - toMs(b.overlap.start) ||
-      minutesOf(b.overlap) - minutesOf(a.overlap),
-  );
-  const best = candidates[0];
-  if (best === undefined) {
-    return {
-      reason: {
-        criterion: 'time',
-        outcome: 'unmet',
-        mandatory,
-        text:
-          longest > 0
-            ? `Your times overlap for at most ${longest} min; it needs ${needed} min`
-            : 'No overlap with your times',
-      },
-      slot: null,
-      preferred: false,
-    };
-  }
-  return {
-    reason: {
+  if (options.length === 0) {
+    return settled({
       criterion: 'time',
-      outcome: 'met',
+      outcome: 'unmet',
       mandatory,
-      text: `Possible overlap ${formatInterval(best.overlap, zone)} (${minutesOf(best.overlap)} min) — not confirmed until a time is fixed`,
-    },
-    slot: best.overlap,
-    preferred: best.preferred,
-  };
+      text:
+        longest > 0
+          ? `Your times overlap for at most ${longest} min; it needs ${needed} min`
+          : 'No overlap with your times',
+    });
+  }
+  return { kind: 'flexible', options, neededMinutes: needed };
 }
 
 function evaluateBudget(wish: Wish<Money>, cost: ActivityCost): MatchReason {
@@ -296,17 +288,71 @@ function evaluateLevel(wish: Wish<Level>, level: Level | null): MatchReason {
   return { criterion: 'level', outcome: 'unmet', mandatory: wish.mandatory, text: `Level ${level} (you asked for ${wish.value})` };
 }
 
-function equipmentReason(coverage: EquipmentCoverage, zone: string): MatchReason {
+function equipmentReason(coverage: EquipmentCoverage, zone: string, fixed: boolean): MatchReason {
   // Missing equipment is shown, never used to hide the activity: people join
-  // precisely because they can bring what is missing.
-  const when = formatInterval(coverage.interval, zone);
+  // precisely because they can bring what is missing. While the time is not
+  // fixed the wording stays conditional — "if it runs", never "for".
+  const when = `${fixed ? 'for' : 'if it runs'} ${formatInterval(coverage.interval, zone)}`;
   if (coverage.complete) {
-    return { criterion: 'equipment', outcome: 'info', mandatory: false, text: `Required equipment covered for ${when}` };
+    return { criterion: 'equipment', outcome: 'info', mandatory: false, text: `Required equipment covered ${when}` };
   }
   const parts = coverage.needs
     .filter((need) => need.required && need.missing > 0)
     .map((need) => `${need.missing} ${need.kind.replace(/_/g, ' ')}`);
-  return { criterion: 'equipment', outcome: 'info', mandatory: false, text: `Missing for ${when}: ${parts.join(', ')}` };
+  return { criterion: 'equipment', outcome: 'info', mandatory: false, text: `Missing ${when}: ${parts.join(', ')}` };
+}
+
+function isoAt(ms: number): Instant {
+  return new Date(ms).toISOString();
+}
+
+interface Candidate {
+  readonly interval: Interval;
+  readonly coverage: EquipmentCoverage;
+}
+
+/**
+ * The activity-length interval inside `overlap` that confirmed equipment
+ * covers best.
+ *
+ * A contribution covers [t, t + D] only when one of its own declared intervals
+ * contains it, so coverage can only improve at the overlap's start or at the
+ * start of a declared interval: those are the only starts worth trying, and
+ * trying all of them finds the best one without a scan. Nothing is extended
+ * or stitched together — an interval no single declaration contains is not
+ * treated as covered. Ties go to the earliest start.
+ */
+function bestCandidate(
+  overlap: Interval,
+  durationMs: number,
+  contributions: readonly EquipmentContribution[],
+  coverageAt: (interval: Interval) => EquipmentCoverage,
+): Candidate {
+  const first = toMs(overlap.start);
+  const last = toMs(overlap.end) - durationMs;
+  const starts = new Set<number>([first]);
+  for (const contribution of contributions) {
+    if (contribution.status !== 'confirmed') continue;
+    for (const declared of contribution.availableDuring ?? []) {
+      const start = toMs(declared.start);
+      if (start >= first && start <= last) starts.add(start);
+    }
+  }
+  let best: (Candidate & { readonly missing: number }) | null = null;
+  for (const start of [...starts].sort((a, b) => a - b)) {
+    const interval = { start: isoAt(start), end: isoAt(start + durationMs) };
+    const coverage = coverageAt(interval);
+    const missing = coverage.needs.reduce((sum, need) => sum + need.missing, 0);
+    if (
+      best === null ||
+      coverage.requiredMissing < best.coverage.requiredMissing ||
+      (coverage.requiredMissing === best.coverage.requiredMissing && missing < best.missing)
+    ) {
+      best = { interval, coverage, missing };
+    }
+  }
+  if (best === null) throw new Error('an overlap always has at least one candidate start');
+  return { interval: best.interval, coverage: best.coverage };
 }
 
 export function matchActivity(query: ActivityQuery, activity: ActivityDescriptor, now: Instant): ActivityMatch {
@@ -330,7 +376,62 @@ export function matchActivity(query: ActivityQuery, activity: ActivityDescriptor
   }
 
   const time = evaluateTime(query, activity, zone, now);
-  reasons.push(time.reason);
+  const needs = activity.equipment?.needs ?? [];
+  const contributions = activity.equipment?.contributions ?? [];
+  const participantIds = activeParticipants(activity.participation).ids;
+  const coverageAt = (interval: Interval): EquipmentCoverage =>
+    equipmentCoverage({
+      interval,
+      needs,
+      contributions,
+      participantIds,
+      organizerId: activity.participation.organizerId,
+    });
+
+  let overlap: Interval | null;
+  let candidate: Interval | null;
+  let preferred: boolean;
+  let equipment: EquipmentCoverage | null = null;
+  if (time.kind === 'settled') {
+    // A fixed appointment is judged whole: equipment must cover all of it.
+    reasons.push(time.reason);
+    overlap = time.overlap;
+    candidate = time.overlap;
+    preferred = time.preferred;
+    if (candidate !== null && needs.length > 0) equipment = coverageAt(candidate);
+  } else {
+    const durationMs = time.neededMinutes * 60_000;
+    const options = time.options.map((option) => {
+      if (needs.length === 0) {
+        const start = toMs(option.overlap.start);
+        return { ...option, candidate: { start: option.overlap.start, end: isoAt(start + durationMs) }, coverage: null };
+      }
+      const best = bestCandidate(option.overlap, durationMs, contributions, coverageAt);
+      return { ...option, candidate: best.interval, coverage: best.coverage };
+    });
+    // Preferred times first, then the overlap where equipment is least short,
+    // then the earliest. Equipment only chooses which possible time to show;
+    // it never removes the activity.
+    options.sort(
+      (a, b) =>
+        Number(b.preferred) - Number(a.preferred) ||
+        (a.coverage?.requiredMissing ?? 0) - (b.coverage?.requiredMissing ?? 0) ||
+        toMs(a.candidate.start) - toMs(b.candidate.start) ||
+        minutesOf(b.overlap) - minutesOf(a.overlap),
+    );
+    const chosen = options[0];
+    if (chosen === undefined) throw new Error('a flexible time result always has an option');
+    reasons.push({
+      criterion: 'time',
+      outcome: 'met',
+      mandatory: true,
+      text: `Possible overlap ${formatInterval(chosen.overlap, zone)} (${minutesOf(chosen.overlap)} min) — not confirmed until a time is fixed`,
+    });
+    overlap = chosen.overlap;
+    candidate = chosen.candidate;
+    preferred = chosen.preferred;
+    equipment = chosen.coverage;
+  }
 
   const placesLeft = remainingPlaces(activity.capacity, activity.participation);
   if (placesLeft !== null) {
@@ -345,17 +446,7 @@ export function matchActivity(query: ActivityQuery, activity: ActivityDescriptor
   if (query.costType !== undefined) reasons.push(evaluateCostType(query.costType, activity.cost));
   if (query.level !== undefined) reasons.push(evaluateLevel(query.level, activity.level));
 
-  let equipment: EquipmentCoverage | null = null;
-  if (activity.equipment !== null && activity.equipment.needs.length > 0 && time.slot !== null) {
-    equipment = equipmentCoverage({
-      interval: time.slot,
-      needs: activity.equipment.needs,
-      contributions: activity.equipment.contributions,
-      participantIds: activeParticipants(activity.participation).ids,
-      organizerId: activity.participation.organizerId,
-    });
-    reasons.push(equipmentReason(equipment, zone));
-  }
+  if (equipment !== null) reasons.push(equipmentReason(equipment, zone, time.kind === 'settled'));
 
   const mandatory = reasons.filter((reason) => reason.mandatory);
   const verdict: Verdict = mandatory.some((reason) => reason.outcome === 'unmet')
@@ -368,8 +459,9 @@ export function matchActivity(query: ActivityQuery, activity: ActivityDescriptor
     signalId: activity.signalId,
     verdict,
     reasons,
-    slot: time.slot,
-    slotIsPreferred: time.preferred,
+    overlap,
+    overlapIsPreferred: preferred,
+    candidate,
     placesLeft,
     equipment,
     preferencesMet: reasons.filter((reason) => !reason.mandatory && reason.outcome === 'met').length,
@@ -394,10 +486,10 @@ export function matchActivities(
     .sort(
       (a, b) =>
         VERDICT_ORDER[a.verdict] - VERDICT_ORDER[b.verdict] ||
-        Number(b.slotIsPreferred) - Number(a.slotIsPreferred) ||
+        Number(b.overlapIsPreferred) - Number(a.overlapIsPreferred) ||
         b.preferencesMet - a.preferencesMet ||
-        (a.slot === null ? 1 : 0) - (b.slot === null ? 1 : 0) ||
-        (a.slot !== null && b.slot !== null ? toMs(a.slot.start) - toMs(b.slot.start) : 0) ||
+        (a.candidate === null ? 1 : 0) - (b.candidate === null ? 1 : 0) ||
+        (a.candidate !== null && b.candidate !== null ? toMs(a.candidate.start) - toMs(b.candidate.start) : 0) ||
         (a.signalId < b.signalId ? -1 : a.signalId > b.signalId ? 1 : 0),
     );
 }

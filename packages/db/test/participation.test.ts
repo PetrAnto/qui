@@ -278,3 +278,138 @@ describe('reporting that it actually happened', () => {
     expect(await outcomeEvents()).toBe(before + 3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review round on b904670: R1 (outcome after removal) and R2 (membership
+// must not bypass current eligibility).
+// ---------------------------------------------------------------------------
+
+function reasonOf(result: { ok: boolean; reason?: string }): string | undefined {
+  return result.ok ? undefined : result.reason;
+}
+
+async function suspend(userId: string): Promise<void> {
+  const person = await ports.repo.getPerson(userId);
+  if (person === null) throw new Error('missing person');
+  await ports.repo.putPerson({ ...person, accountState: 'suspended' });
+}
+
+describe('R1 — an old accepted response does not outlive removal from a group', () => {
+  for (const exclude of [false, true]) {
+    it(`refuses an outcome from a participant accepted then ${exclude ? 'excluded' : 'removed'}`, async () => {
+      const signalId = await hostedSignal('join', 4);
+      const responseId = await respond(signalId, DEMO_USERS.hugo);
+      const accepted = await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' });
+      expect(accepted.ok).toBe(true);
+      await removeParticipant(ports, { hostId: DEMO_USERS.lea, signalId, userId: DEMO_USERS.hugo, exclude });
+
+      const before = (await ports.repo.listAnalytics()).length;
+      expect(await recordLocalOutcome(ports, { actorId: DEMO_USERS.hugo, signalId })).toEqual({
+        ok: false,
+        reason: 'not_participant',
+      });
+      expect((await ports.repo.listAnalytics()).length).toBe(before);
+    });
+  }
+
+  it('still accepts an accepted responder on an Offer, and the host of the group', async () => {
+    const offer = await hostedSignal('offer');
+    const responseId = await respond(offer, DEMO_USERS.hugo);
+    await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' });
+    expect((await recordLocalOutcome(ports, { actorId: DEMO_USERS.hugo, signalId: offer })).ok).toBe(true);
+
+    const group = await hostedSignal('event', 4);
+    expect((await recordLocalOutcome(ports, { actorId: DEMO_USERS.lea, signalId: group })).ok).toBe(true);
+  });
+
+  it('refuses an accepted Offer responder the host later excluded', async () => {
+    const offer = await hostedSignal('offer');
+    const responseId = await respond(offer, DEMO_USERS.hugo);
+    await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' });
+    await removeParticipant(ports, { hostId: DEMO_USERS.lea, signalId: offer, userId: DEMO_USERS.hugo, exclude: true });
+    expect(reasonOf(await recordLocalOutcome(ports, { actorId: DEMO_USERS.hugo, signalId: offer }))).toBe(
+      'not_participant',
+    );
+  });
+});
+
+describe('R2 — existing membership never bypasses current eligibility', () => {
+  it('refuses a repeat join from an account suspended since it joined, and writes nothing', async () => {
+    const signalId = await hostedSignal('event', 4);
+    expect((await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId })).ok).toBe(true);
+    await suspend(DEMO_USERS.hugo);
+
+    const before = await snapshot(signalId);
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId })).toEqual({
+      ok: false,
+      reason: 'account_suspended',
+    });
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses a repeat join after a block with the host, or once the signal closed', async () => {
+    const blocked = await hostedSignal('event', 4);
+    await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId: blocked });
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.hugo });
+    expect(reasonOf(await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId: blocked }))).toBe('blocked');
+
+    const closed = await hostedSignal('event', 4);
+    await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: closed });
+    await closeSignal(ports, { hostId: DEMO_USERS.lea, signalId: closed });
+    expect(reasonOf(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: closed }))).toBe('signal_not_open');
+  });
+
+  it('still lets an eligible member retry into a full activity without a duplicate', async () => {
+    const signalId = await hostedSignal('event', 1);
+    await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId });
+    const before = await snapshot(signalId);
+    expect((await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId })).ok).toBe(true);
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses to accept a pending response from a member now blocked with the host, and writes nothing', async () => {
+    const signalId = await hostedSignal('join', 4);
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId });
+    await blockUser(ports, { actorId: DEMO_USERS.hugo, targetId: DEMO_USERS.lea });
+
+    const before = await snapshot(signalId);
+    expect(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' })).toEqual({
+      ok: false,
+      reason: 'blocked',
+    });
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('refuses to accept a pending response from a member suspended since joining', async () => {
+    const signalId = await hostedSignal('join', 1);
+    const responseId = await respond(signalId, DEMO_USERS.hugo);
+    await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId });
+    await suspend(DEMO_USERS.hugo);
+
+    const before = await snapshot(signalId);
+    expect(reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId, decision: 'accepted' }))).toBe(
+      'account_suspended',
+    );
+    expect(await snapshot(signalId)).toEqual(before);
+  });
+
+  it('revalidates a repeated acceptance instead of reporting stale success', async () => {
+    const group = await hostedSignal('join', 4);
+    const groupResponse = await respond(group, DEMO_USERS.hugo);
+    await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId: groupResponse, decision: 'accepted' });
+
+    const offer = await hostedSignal('offer');
+    const offerResponse = await respond(offer, DEMO_USERS.marc);
+    await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId: offerResponse, decision: 'accepted' });
+
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.hugo });
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.marc });
+    expect(
+      reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId: groupResponse, decision: 'accepted' })),
+    ).toBe('blocked');
+    expect(
+      reasonOf(await decideResponse(ports, { hostId: DEMO_USERS.lea, responseId: offerResponse, decision: 'accepted' })),
+    ).toBe('blocked');
+  });
+});

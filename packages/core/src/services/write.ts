@@ -415,14 +415,20 @@ export async function joinSignal(
   if (creator === null) return fail('not_found');
 
   const participants = await ports.repo.listParticipants(signal.id);
-  // Joining twice is not joining again: no second row, no second event, and
-  // no capacity check against a place the person already holds.
-  if (participants.some((entry) => entry.userId === input.actorId && entry.state === 'joined')) {
-    return ok({ signalId: signal.id });
-  }
-  const joinedCount = participants.filter((entry) => entry.state === 'joined').length;
-  const decision = canJoinEvent(actor.view, signal, creator.view, graph, joinedCount, ports.now());
+  const alreadyJoined = participants.some(
+    (entry) => entry.userId === input.actorId && entry.state === 'joined',
+  );
+  // Eligibility is checked now, whatever happened before: a member who has
+  // since been suspended, blocked or excluded, or whose signal has closed, is
+  // refused like anyone else. Only the place they already hold is not counted
+  // against them.
+  const othersJoined = participants.filter(
+    (entry) => entry.state === 'joined' && entry.userId !== input.actorId,
+  ).length;
+  const decision = canJoinEvent(actor.view, signal, creator.view, graph, othersJoined, ports.now());
   if (!decision.allowed) return fail(decision.reason);
+  // Joining twice is not joining again: no second row, no second event.
+  if (alreadyJoined) return ok({ signalId: signal.id });
 
   await ports.repo.putParticipant({
     signalId: signal.id,
@@ -479,18 +485,10 @@ export async function decideResponse(
   if (response.state === 'withdrawn') return fail('conflict');
   if (response.state === 'accepted' && input.decision === 'declined') return fail('conflict');
 
-  // Repeating the decision already recorded is a no-op, not a second effect.
-  if (response.state === input.decision) {
-    if (input.decision === 'declined' || !opensPrivateThread(signal.type)) {
-      return ok({ threadId: null });
-    }
-    const existing = (await ports.repo.listThreads(host.person.id)).find(
-      (thread) => thread.responseId === response.id,
-    );
-    return ok({ threadId: existing?.id ?? null });
-  }
-
   if (input.decision === 'declined') {
+    // Declining grants nothing, so it needs no eligibility check; declining
+    // twice is a no-op.
+    if (response.state === 'declined') return ok({ threadId: null });
     await ports.repo.putResponse({ ...response, state: 'declined' });
     await audit(ports, {
       actorId: input.hostId,
@@ -501,20 +499,23 @@ export async function decideResponse(
     return ok({ threadId: null });
   }
 
+  // Accepting is revalidated every time — including a repeat, and including a
+  // responder who already joined directly. Existing membership only means the
+  // person's place is not counted twice; it never stands in for being
+  // eligible *now* (suspension, blocks, exclusion, audience, lifecycle).
   if (!opensPrivateThread(signal.type)) {
-    // Accepting into a group is joining on the responder's behalf, so it must
-    // pass exactly what joining directly passes: live signal, no block, no
-    // exclusion, audience, and a free place. A responder who already joined
-    // directly holds their place and is not counted twice.
     const participants = await ports.repo.listParticipants(signal.id);
     const alreadyJoined = participants.some(
       (entry) => entry.userId === responder.person.id && entry.state === 'joined',
     );
-    if (!alreadyJoined) {
-      const joinedCount = participants.filter((entry) => entry.state === 'joined').length;
-      const eligible = canJoinEvent(responder.view, signal, host.view, graph, joinedCount, ports.now());
-      if (!eligible.allowed) return fail(eligible.reason);
-    }
+    const othersJoined = participants.filter(
+      (entry) => entry.state === 'joined' && entry.userId !== responder.person.id,
+    ).length;
+    const eligible = canJoinEvent(responder.view, signal, host.view, graph, othersJoined, ports.now());
+    if (!eligible.allowed) return fail(eligible.reason);
+
+    // Repeating the decision already recorded is a no-op, not a second effect.
+    if (response.state === 'accepted') return ok({ threadId: null });
 
     await ports.repo.putResponse({ ...response, state: 'accepted' });
     await audit(ports, {
@@ -541,6 +542,13 @@ export async function decideResponse(
     graph,
   );
   if (!allowed.allowed) return fail(allowed.reason);
+
+  if (response.state === 'accepted') {
+    const existing = (await ports.repo.listThreads(host.person.id)).find(
+      (thread) => thread.responseId === response.id,
+    );
+    return ok({ threadId: existing?.id ?? null });
+  }
 
   await ports.repo.putResponse({ ...response, state: 'accepted' });
   await audit(ports, {
@@ -909,14 +917,18 @@ export async function recordLocalOutcome(
     ports.repo.getSignal(input.signalId),
   ]);
   if (actor === null || signal === null) return fail('not_found');
-  const [participants, responses] = await Promise.all([
+  const [participants, responses, exclusions] = await Promise.all([
     ports.repo.listParticipants(signal.id),
     ports.repo.listResponses({ signalId: signal.id }),
+    ports.repo.listHostExclusions(),
   ]);
   const decision = canReportOutcome(actor.view, signal, {
     joined: participants.some((entry) => entry.userId === input.actorId && entry.state === 'joined'),
     acceptedResponse: responses.some(
       (response) => response.responderId === input.actorId && response.state === 'accepted',
+    ),
+    excluded: exclusions.some(
+      (exclusion) => exclusion.signalId === signal.id && exclusion.userId === input.actorId,
     ),
   });
   if (!decision.allowed) return fail(decision.reason);

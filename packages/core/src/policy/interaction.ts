@@ -149,18 +149,27 @@ export function canContact(
  * rule below stays a pure function of facts rather than of a repository.
  */
 export interface SignalMembership {
-  /** Holds a participant row in state 'joined'. */
+  /** Holds a participant row in state 'joined' — the current state, not history. */
   readonly joined: boolean;
   /** Has a response to this signal that its host accepted. */
   readonly acceptedResponse: boolean;
+  /** Was excluded from this object by its host (INV-HOST-1). */
+  readonly excluded: boolean;
 }
 
 /**
- * "It actually happened" is a self-report, and it only means something coming
- * from someone who was part of the thing: its host, a joined participant, or a
- * responder the host said yes to. Anyone else would be inflating the one
- * number the product exists to move. This is not attendance verification —
- * nothing here checks that anybody turned up.
+ * INV-OUTCOME-1. "It actually happened" is a self-report, and it only means
+ * something coming from someone who is part of the thing:
+ *
+ *  - its host;
+ *  - for a Join or Event, a participant who is *currently* joined. An old
+ *    accepted response is history: once the host removed or excluded the
+ *    person, it no longer makes them part of the gathering;
+ *  - for an Ask or Offer, where accepting *is* the whole relationship, the
+ *    responder the host said yes to — unless the host excluded them.
+ *
+ * Anyone else would be inflating the one number the product exists to move.
+ * This is not attendance verification: nothing here checks anyone turned up.
  */
 export function canReportOutcome(
   actor: ActorView,
@@ -171,7 +180,9 @@ export function canReportOutcome(
   if (!active.allowed) return active;
   if (signal.state === 'removed') return deny('content_removed');
   if (signal.creatorId === actor.id) return ALLOW;
-  if (membership.joined || membership.acceptedResponse) return ALLOW;
+  if (membership.excluded) return deny('not_participant');
+  if (membership.joined) return ALLOW;
+  if (opensPrivateThread(signal.type) && membership.acceptedResponse) return ALLOW;
   return deny('not_participant');
 }
 

@@ -115,7 +115,8 @@ describe('a flexible free walk in Marseille', () => {
   it('finds an overlap long enough for the walk, and says it is not an appointment', () => {
     const match = matchActivity(query, saturday, NOW);
     expect(match.verdict).toBe('compatible');
-    expect(match.slot).toEqual(span('sat', '10:00', '12:00'));
+    expect(match.overlap).toEqual(span('sat', '10:00', '12:00'));
+    expect(match.candidate).toEqual(span('sat', '10:00', '11:30'));
     expect(match.reasons.find((reason) => reason.criterion === 'time')?.text).toBe(
       'Possible overlap Sat 10:00–12:00 (120 min) — not confirmed until a time is fixed',
     );
@@ -428,7 +429,7 @@ describe('paddleboarding in Ajaccio with missing equipment', () => {
     expect(match.reasons.find((reason) => reason.criterion === 'equipment')).toMatchObject({
       outcome: 'info',
       mandatory: false,
-      text: 'Missing for Sun 09:00–11:30: 2 board',
+      text: 'Missing if it runs Sun 09:00–11:00: 2 board',
     });
   });
 });
@@ -668,5 +669,87 @@ describe('time zones and formatting', () => {
       later,
     );
     expect(match.verdict).toBe('incompatible');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review round on b904670: R3 — equipment is checked against a
+// duration-length candidate interval, not the whole flexible overlap.
+// ---------------------------------------------------------------------------
+
+describe('R3 — equipment for a flexible window', () => {
+  const board: EquipmentNeed = { id: 'need-board', kind: 'board', quantity: 1, per: 'participant', required: true };
+  const court: EquipmentNeed = { id: 'need-court', kind: 'court_reservation', quantity: 1, per: 'activity', required: true };
+  const participation = { organizerId: 'user-a', organizerParticipates: true, participantIds: [] };
+
+  function confirmed(id: string, needId: string, interval: Interval, use: 'own_use' | 'shareable' = 'own_use'): EquipmentContribution {
+    return { id, needId, contributorId: 'user-a', use, status: 'confirmed', quantity: 1, availableDuring: [interval] };
+  }
+
+  function proposal(needs: EquipmentNeed[], contributions: EquipmentContribution[]) {
+    return activity({
+      signalId: 'sig-r3',
+      geoScopeId: 'geo:city:ajaccio',
+      practiceKey: 'paddle',
+      timing: { kind: 'proposed', windows: [span('sat', '14:00', '18:00')], durationMinutes: 120 },
+      participation,
+      equipment: { needs, contributions },
+    });
+  }
+
+  const search: ActivityQuery = {
+    practiceKey: 'paddle',
+    geoScopeId: 'geo:city:ajaccio',
+    timezone: PARIS,
+    availability: [span('sat', '14:00', '18:00')],
+  };
+
+  it('finds the later two-hour interval the confirmed equipment covers', () => {
+    const match = matchActivity(search, proposal([board], [confirmed('c1', 'need-board', span('sat', '15:00', '17:00'))]), NOW);
+    expect(match.verdict).toBe('compatible');
+    expect(match.overlap).toEqual(span('sat', '14:00', '18:00'));
+    expect(match.candidate).toEqual(span('sat', '15:00', '17:00'));
+    expect(match.equipment?.complete).toBe(true);
+    expect(match.reasons.find((reason) => reason.criterion === 'equipment')?.text).toBe(
+      'Required equipment covered if it runs Sat 15:00–17:00',
+    );
+    // A candidate is not an appointment.
+    expect(match.reasons.find((reason) => reason.criterion === 'time')?.text).toContain('not confirmed');
+  });
+
+  it('uses the interval where several declarations intersect', () => {
+    const match = matchActivity(
+      search,
+      proposal(
+        [board, court],
+        [
+          confirmed('c1', 'need-board', span('sat', '15:00', '18:00')),
+          confirmed('c2', 'need-court', span('sat', '14:30', '17:00'), 'shareable'),
+        ],
+      ),
+      NOW,
+    );
+    expect(match.candidate).toEqual(span('sat', '15:00', '17:00'));
+    expect(match.equipment?.complete).toBe(true);
+  });
+
+  it('never invents availability that no single declaration gives', () => {
+    const tooShort = matchActivity(search, proposal([board], [confirmed('c1', 'need-board', span('sat', '15:00', '16:30'))]), NOW);
+    expect(tooShort.equipment?.complete).toBe(false);
+    expect(tooShort.verdict).toBe('compatible'); // still discoverable
+    expect(tooShort.candidate).toEqual(span('sat', '14:00', '16:00'));
+  });
+
+  it('keeps the full-appointment rule once a time is fixed', () => {
+    const scheduled = {
+      ...proposal([board], [confirmed('c1', 'need-board', span('sat', '15:00', '17:00'))]),
+      timing: { kind: 'scheduled' as const, appointment: span('sat', '14:30', '16:30') },
+    };
+    const match = matchActivity(search, scheduled, NOW);
+    expect(match.candidate).toEqual(span('sat', '14:30', '16:30'));
+    expect(match.equipment?.complete).toBe(false);
+    expect(match.reasons.find((reason) => reason.criterion === 'equipment')?.text).toBe(
+      'Missing for Sat 14:30–16:30: 1 board',
+    );
   });
 });

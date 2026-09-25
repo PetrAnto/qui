@@ -527,7 +527,7 @@ describe('INV-SUSPEND-1 suspended and restricted accounts respect policy', () =>
 describe('INV-OUTCOME-1 only people who were part of a signal can report its outcome', () => {
   const host = actor('host');
   const event = signal('s1', host.id, 'event');
-  const none = { joined: false, acceptedResponse: false };
+  const none = { joined: false, acceptedResponse: false, excluded: false };
 
   it('refuses an unrelated account, including a moderator acting as one', () => {
     expect(canReportOutcome(actor('stranger'), event, none)).toEqual({
@@ -541,16 +541,34 @@ describe('INV-OUTCOME-1 only people who were part of a signal can report its out
 
   it('accepts exactly the host, a joined participant and an accepted responder', () => {
     expect(canReportOutcome(host, event, none).allowed).toBe(true);
-    expect(canReportOutcome(actor('guest'), event, { joined: true, acceptedResponse: false }).allowed).toBe(true);
+    expect(canReportOutcome(actor('guest'), event, { ...none, joined: true }).allowed).toBe(true);
     const offer = signal('s2', host.id, 'offer');
     expect(
-      canReportOutcome(actor('responder'), offer, { joined: false, acceptedResponse: true }).allowed,
+      canReportOutcome(actor('responder'), offer, { ...none, acceptedResponse: true }).allowed,
     ).toBe(true);
+  });
+
+  it('does not let an old accepted response stand in for group membership', () => {
+    // Accepted into a Join/Event, then removed or excluded: no longer joined.
+    expect(canReportOutcome(actor('guest'), event, { ...none, acceptedResponse: true })).toEqual({
+      allowed: false,
+      reason: 'not_participant',
+    });
+    expect(
+      canReportOutcome(actor('guest'), signal('s4', host.id, 'join'), { ...none, acceptedResponse: true }).reason,
+    ).toBe('not_participant');
+  });
+
+  it('refuses anyone the host excluded from that object, whatever else they hold', () => {
+    const offer = signal('s5', host.id, 'offer');
+    expect(
+      canReportOutcome(actor('responder'), offer, { ...none, acceptedResponse: true, excluded: true }).reason,
+    ).toBe('not_participant');
   });
 
   it('refuses a suspended account and a removed signal even for its own members', () => {
     const suspended = actor('guest', { accountState: 'suspended' });
-    expect(canReportOutcome(suspended, event, { joined: true, acceptedResponse: false }).reason).toBe(
+    expect(canReportOutcome(suspended, event, { ...none, joined: true }).reason).toBe(
       'account_suspended',
     );
     expect(canReportOutcome(host, signal('s3', host.id, 'event', { state: 'removed' }), none).reason).toBe(

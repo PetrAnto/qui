@@ -124,6 +124,20 @@ age and locality rules.
    A `confirmed` contribution with no dates counts for nothing. The UI must
    therefore require dates at confirmation.
 
+   **Overlap vs candidate interval (implemented).** For a *proposed* activity,
+   the possible overlap between someone's times and the activity (`overlap`)
+   can be longer than the activity itself. Equipment is judged against an
+   activity-length **candidate interval** inside that overlap: the one the
+   confirmed declarations cover best, which need not be the earliest.
+
+   Example: a 120-minute activity, an overlap of 14:00–18:00 and a board
+   confirmed for 15:00–17:00 give the candidate 15:00–17:00, which is covered.
+
+   The candidate is **not an appointment**; the wording stays "if it runs …".
+   No availability is invented: an interval that no single declaration
+   contains is not covered. For a *scheduled* activity, the candidate is the
+   whole appointment and equipment must cover all of it.
+
 3. **Discovery and joining are separate.**
    - Matching takes no viewer and grants nothing.
    - Visibility projection is applied before activities are passed in.
@@ -241,7 +255,12 @@ any route, service, repository or UI, and they change no permission.
 
 Runtime participation fixes. These restrict; they do not widen:
 
-- `decideResponse` validates before its first write.
+- `decideResponse` validates before its first write, and **every** acceptance
+  is revalidated against current eligibility: a repeat acceptance, and a
+  responder who already joined directly, included. Existing membership only
+  stops a place being counted twice; it never bypasses suspension, blocks,
+  exclusion, audience or signal lifecycle. `joinSignal` applies the same rule
+  to a member retrying a join.
   - Accepting into a Join or Event runs the same `canJoinEvent` check as a
     direct join: live signal, block, host exclusion, audience, capacity.
   - Accepting an Ask or Offer runs `canOpenScopedThread` before the response
@@ -250,8 +269,12 @@ Runtime participation fixes. These restrict; they do not widen:
   or declining an accepted one, is a `conflict`. Joining twice creates no
   duplicate row.
 - Outcome reports are restricted by `canReportOutcome`, recorded as
-  **`INV-OUTCOME-1`** in [SAFETY.md](SAFETY.md). They remain self-reports. No
-  attendance verification exists.
+  **`INV-OUTCOME-1`** in [SAFETY.md](SAFETY.md).
+  - For a Join or Event, only current membership counts: an old accepted
+    response does not survive removal or exclusion.
+  - For an Ask or Offer, an accepted responder still qualifies unless the host
+    excluded them.
+  - Reports remain self-reports. No attendance verification exists.
 
 ---
 

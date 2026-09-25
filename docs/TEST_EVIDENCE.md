@@ -8,7 +8,8 @@ Recorded: **2026-08-16**, on Linux, Node >= 22.12, pnpm 10.33, vitest 3.2.7.
 Updated: **2026-08-19** (counts re-run on `0692bc1`; live-deploy correction).
 Updated: **2026-09-25** (branch `feat/activity-foundations`: participation
 fixes, `INV-OUTCOME-1`, pure activity modules; counts below re-run on that
-branch, Node 22.23.1, `vitest run --maxWorkers=1`).
+branch, Node 22.23.1, `vitest run --maxWorkers=1`; re-run after the review
+round on `b904670`).
 
 ## Unit and integration suite — PASSING
 
@@ -16,20 +17,20 @@ branch, Node 22.23.1, `vitest run --maxWorkers=1`).
 
 ```
 Test Files  19 passed (19)
-     Tests  247 passed (247)
+     Tests  263 passed (263)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 41 |
-| core | `test/activity.test.ts` | 32 |
+| core | `test/safety-invariants.test.ts` | 43 |
+| core | `test/activity.test.ts` | 36 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
 | db | `test/d1.test.ts` | 18 |
 | db | `test/flows.test.ts` | 16 |
-| db | `test/participation.test.ts` | 13 |
+| db | `test/participation.test.ts` | 23 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
@@ -48,14 +49,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **41
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **43
 tests** in `safety-invariants.test.ts` cover the 18 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
 `INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 41.
+`analytics.test.ts`, so the gate reports more than 43.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -76,6 +77,18 @@ against `main`'s `services/write.ts` before the fix: **11 failed, 2 passed**.
 The 2 that pass assert behaviour the fix must keep: the host, joined
 participants and accepted responders can still report an outcome, and a
 responder who already joined is not counted twice.
+
+2026-09-25, review round on `b904670`: 16 new regressions were added for
+three reproduced defects.
+- R1: an accepted-then-removed participant could still report an outcome.
+- R2: existing membership bypassed current eligibility.
+- R3: equipment was checked against the whole flexible overlap instead of an
+  activity-length interval.
+
+Run against `b904670`'s code, **14 failed and 2 passed**. The 2 that pass
+assert preserved behaviour: an eligible member's retry into a full activity
+is still a no-op success, and the host and accepted Offer responder can still
+report.
 
 ## End-to-end suite — PASSING
 

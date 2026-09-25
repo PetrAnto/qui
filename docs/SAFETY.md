@@ -5,7 +5,7 @@ trade against features. Weakening one requires a superseding ADR and a recorded
 product-owner decision — not a pull request.
 
 Each `INV-` identifier below corresponds to a `describe()` block in
-`packages/core/test/safety-invariants.test.ts` (41 tests). CI runs them twice:
+`packages/core/test/safety-invariants.test.ts` (43 tests). CI runs them twice:
 once inside the full suite, and once as a separate named gate
 (`pnpm test:safety`), so that a failure is legible as *a safety failure* rather
 than as one red line among many.
@@ -74,7 +74,7 @@ to watch, which is the exact failure the button exists to prevent.
 
 | ID | Rule | Enforced in |
 |---|---|---|
-| `INV-OUTCOME-1` | "It actually happened" can be reported only by someone who was part of the signal: its host (creator), a participant in state `joined`, or a responder whose response the host accepted. An unrelated account, a pending, declined or withdrawn responder, a removed participant, a moderator acting as such, and a suspended account cannot report one, and a removed signal accepts none. A report is a **self-report**: it never records verified attendance and no capability derives from it. | `policy/interaction.ts` (`canReportOutcome`), `services/write.ts` (`recordLocalOutcome`) |
+| `INV-OUTCOME-1` | "It actually happened" can be reported only by someone who is part of the signal **now**: its host (creator); for a Join or Event, a participant *currently* in state `joined`; for an Ask or Offer, a responder whose response the host accepted. An old accepted response never stands in for group membership, so a participant the host removed or excluded cannot report, whatever their response history. Also refused: an unrelated account, a pending, declined or withdrawn responder, anyone the host excluded from that object, a moderator acting as such, and a suspended account; a removed signal accepts none. A report is a **self-report**: it never records verified attendance and no capability derives from it. | `policy/interaction.ts` (`canReportOutcome`), `services/write.ts` (`recordLocalOutcome`) |
 
 The local outcome is the metric the product exists to move, which is exactly why
 a stranger must not be able to add to it.
