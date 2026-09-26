@@ -152,6 +152,38 @@ describe('publishing a proposal', () => {
     expect(all.filter((signal) => signal.creatorId === DEMO_USERS.tom && signal.plan !== null)).toHaveLength(1);
   });
 
+  it('creates once under simultaneous identical requests: one created, one existing, one event and one audit row', async () => {
+    await exploreAjaccio();
+    const results = await Promise.all([publish(), publish()]);
+    expect(results.every((result) => result.ok)).toBe(true);
+    const created = results.map((result) => (result.ok ? result.value.created : null)).sort();
+    expect(created).toEqual([false, true]);
+    const id = results[0]?.ok ? results[0].value.signalId : '';
+    const events = (await ports.repo.listAnalytics()).filter(
+      (event) => event.name === 'signal_created' && event.targetId === id,
+    );
+    const audits = (await ports.repo.listAudit()).filter(
+      (entry) => entry.action === 'proposal_published' && entry.subjectId === id,
+    );
+    expect(events).toHaveLength(1);
+    expect(audits).toHaveLength(1);
+  });
+
+  it('never lets a simultaneous request with other inputs overwrite the winner', async () => {
+    await exploreAjaccio();
+    const other: ActivitySearchInput = { ...PADDLE, durationMinutes: 60 };
+    const [a, b] = await Promise.all([publish(PADDLE), publish(other)]);
+    const outcomes = [a, b].map((result) => (result.ok ? 'ok' : result.reason)).sort();
+    expect(outcomes).toEqual(['conflict', 'ok']);
+    const winner = a.ok ? PADDLE : other;
+    const stored = await ports.repo.getSignal(a.ok ? a.value.signalId : b.ok ? b.value.signalId : '');
+    expect(stored?.plan?.durationMinutes).toBe(winner.durationMinutes);
+    const events = (await ports.repo.listAnalytics()).filter(
+      (event) => event.name === 'signal_created' && event.targetId === stored?.id,
+    );
+    expect(events).toHaveLength(1);
+  });
+
   it('refuses to reuse a key for different inputs', async () => {
     await exploreAjaccio();
     await publish();

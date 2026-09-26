@@ -113,3 +113,35 @@ test('recovers from a failed publication without creating a duplicate', async ({
   await page.goto('/signals');
   await expect(page.getByRole('heading', { name: 'canyoning in Ajaccio' })).toHaveCount(1);
 });
+
+test('another persona with identical criteria sees an unpublished preview and publishes independently', async ({
+  page,
+}) => {
+  await signIn(page); // the demo gives this adult persona: Léa
+  await fillSearch(page, 'rafting', 'Ajaccio');
+  await page.getByRole('button', { name: 'Publish this proposal' }).click();
+  const first = page.getByRole('link', { name: 'View your proposal' });
+  await expect(first).toBeVisible();
+  const firstHref = await first.getAttribute('href');
+
+  // Switch to another adult persona tied to Ajaccio, in the same tab.
+  await page.goto('/me');
+  await page.getByRole('button', { name: /^Marc/ }).click();
+  await page.waitForURL((url) => url.pathname === '/');
+
+  await page.goto('/search');
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('rafting');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  // Léa's proposal is found among the results; the preview below is Marc's own, unpublished.
+  await expect(page.locator('#preview-title')).toHaveText('rafting in Ajaccio');
+  await expect(page.getByText('Preview — not published')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View your proposal' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Publish this proposal' }).click();
+  const second = page.getByRole('link', { name: 'View your proposal' });
+  await expect(second).toBeVisible();
+  expect(await second.getAttribute('href')).not.toBe(firstHref);
+
+  await page.goto('/signals');
+  await expect(page.getByRole('heading', { name: 'rafting in Ajaccio' })).toHaveCount(2);
+});

@@ -19,7 +19,7 @@ results and proposal preview; same command).
 
 ```
 Test Files  25 passed (25)
-     Tests  361 passed (361)
+     Tests  366 passed (366)
 ```
 
 | Project | File | Tests |
@@ -31,10 +31,10 @@ Test Files  25 passed (25)
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
-| db | `test/d1.test.ts` | 20 |
+| db | `test/d1.test.ts` | 21 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
-| db | `test/proposals.test.ts` | 16 |
+| db | `test/proposals.test.ts` | 18 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -44,7 +44,7 @@ Test Files  25 passed (25)
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
 | web | `test/api.test.ts` | 20 |
-| web | `test/activity-draft.test.ts` | 14 |
+| web | `test/activity-draft.test.ts` | 16 |
 | web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
@@ -146,6 +146,17 @@ marker) and **all 5 e2e scenarios** failed. In the e2e, a reload re-sent the
 search, an ordinary visit sent it twice, an abandoned sign-in fired it later,
 stale suggestions stayed, and a failed lookup showed no message.
 
+Correction round on PR #47 at `3d44141`: regressions for two defects.
+- **R1:** publication was not atomic under concurrency.
+- **R2:** publication state was not scoped to the actor.
+
+Red on `3d44141`:
+- 4 unit tests failed: simultaneous identical requests gave two
+  `created: true` and double analytics/audit; a simultaneous request with
+  other inputs overwrote the winner; and two tests on actor-scoped records.
+- The persona e2e failed: the second persona saw the first persona's
+  "Published proposal".
+
 A sixth regression, a minor seeing an adults-only signal listed on its author's
 profile, failed before the one-line fix in `getProfile`. The tests that passed
 throughout assert preserved behaviour: the author's own access, a restricted
@@ -199,9 +210,11 @@ The journey tests assert that no publish, join or respond request is sent.
   - it has no join control;
   - it is listed once in Signals and found again by search;
 - publication refused in a city with no tie — draft kept, nothing created;
-- a failed publication retried without a duplicate.
+- a failed publication retried without a duplicate;
+- another persona searching identical criteria sees its own unpublished
+  preview, and publishes independently.
 
-Total e2e: **33 tests**. Where they were executed for this branch is recorded in
+Total e2e: **34 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:

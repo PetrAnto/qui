@@ -105,8 +105,10 @@ and matched through the existing matcher.
   (`expiresAt`) or through moderation. Author withdrawal is not a power over
   anyone else, but it is an owner decision that has not been made yet.
 
-**Neutral.** The D1 adapter reads `hostId` as the creator for every stored row
-and refuses to persist a proposal. Production persistence of proposals is out
+**Neutral.** Publication uses a new repository method, `insertSignal`, an
+atomic create-if-absent, so that two concurrent first publications cannot
+overwrite each other. The D1 adapter reads `hostId` as the creator for every
+stored row and refuses to persist a proposal, through either method. Production persistence of proposals is out
 of scope, and the in-memory demo repository is where they live.
 
 ## Alternatives considered

@@ -266,6 +266,19 @@ describe('activity proposals (ADR-0016)', () => {
     if (existing === undefined) throw new Error('no seeded signal');
     await expect(d1.putSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
     expect(await d1.getSignal('sig-p-refused')).toBeNull();
+    await expect(d1.insertSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
+  });
+
+  it('creates a hosted signal only if absent, like the in-memory store', async () => {
+    const [existing] = await d1.listSignals();
+    if (existing === undefined) throw new Error('no seeded signal');
+    const fresh = { ...existing, id: 'sig-insert-once', title: 'first' };
+    expect(await d1.insertSignal(fresh)).toBe(true);
+    expect(await d1.insertSignal({ ...fresh, title: 'second' })).toBe(false);
+    expect((await d1.getSignal('sig-insert-once'))?.title).toBe('first');
+    expect(await mem.insertSignal(fresh)).toBe(true);
+    expect(await mem.insertSignal({ ...fresh, title: 'second' })).toBe(false);
+    expect((await mem.getSignal('sig-insert-once'))?.title).toBe('first');
   });
 });
 

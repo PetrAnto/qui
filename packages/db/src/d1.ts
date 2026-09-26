@@ -592,6 +592,18 @@ export function createD1Repository(database: D1Database): Repository {
       await db.insert(s.signals).values(row).onConflictDoUpdate({ target: s.signals.id, set: row });
       return signal;
     },
+    insertSignal: async (signal) => {
+      if (signal.plan !== null || signal.hostId !== signal.creatorId) {
+        throw new Error('D1 does not persist activity proposals yet (ADR-0016)');
+      }
+      await ensureScope(signal.geoScopeId);
+      const inserted = await db
+        .insert(s.signals)
+        .values(signalRow(signal))
+        .onConflictDoNothing({ target: s.signals.id })
+        .returning({ id: s.signals.id });
+      return inserted.length === 1;
+    },
     listResponses: async (filter) => {
       const base = db.select().from(s.signalResponses).orderBy(INSERTION);
       const rows =

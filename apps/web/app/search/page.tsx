@@ -25,6 +25,7 @@ export default async function SearchPage() {
   return (
     <ActivitySearch
       signedIn={viewerId !== null}
+      actorId={viewerId}
       now={store.now()}
       defaultCity={city !== null && timezone !== null ? { id: city.id, name: city.name, timezone } : null}
     />

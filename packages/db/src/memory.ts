@@ -188,6 +188,13 @@ export function createInMemoryRepository(seed: SeedData = EMPTY_SEED): Repositor
       signals.set(signal.id, signal);
       return signal;
     },
+    // Check and write happen in one synchronous step, before this function's
+    // promise is even returned, so no other caller can interleave between them.
+    insertSignal: async (signal) => {
+      if (signals.has(signal.id)) return false;
+      signals.set(signal.id, signal);
+      return true;
+    },
     listResponses: async (filter) => {
       const all = [...responses.values()];
       return filter?.signalId === undefined

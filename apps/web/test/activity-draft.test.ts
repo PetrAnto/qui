@@ -179,19 +179,50 @@ describe('the publication record', () => {
   });
 
   it('round-trips, and rejects anything tampered', () => {
-    const record = { v: 1 as const, key: newProposalKey(), inputs: inputsKey(DRAFT), signalId: null };
+    const record = {
+      v: 2 as const,
+      actorId: 'usr-lea',
+      key: newProposalKey(),
+      inputs: inputsKey(DRAFT),
+      signalId: null,
+    };
     savePublication(record);
-    expect(loadPublication()).toEqual(record);
+    expect(loadPublication('usr-lea')).toEqual(record);
     const done = { ...record, signalId: 'sig-p-usr-lea-abc12345' };
     savePublication(done);
-    expect(loadPublication()).toEqual(done);
-    for (const raw of [
+    expect(loadPublication('usr-lea')).toEqual(done);
+    for (const value of [
       'nope',
-      JSON.stringify({ ...record, key: 'BAD KEY' }),
-      JSON.stringify({ ...record, signalId: 'sig-other' }),
-      JSON.stringify({ ...record, v: 2 }),
+      { ...record, key: 'BAD KEY' },
+      { ...record, signalId: 'sig-other' },
+      { ...record, v: 1 },
+      { ...record, actorId: '' },
     ]) {
-      expect(parsePublication(raw)).toBeNull();
+      expect(parsePublication(value)).toBeNull();
     }
+  });
+});
+
+describe('publication state belongs to one actor', () => {
+  it('never shows persona A’s publication to persona B', () => {
+    const record = {
+      v: 2 as const,
+      actorId: 'usr-lea',
+      key: newProposalKey(),
+      inputs: inputsKey(DRAFT),
+      signalId: 'sig-p-usr-lea-abc12345',
+    };
+    savePublication(record);
+    expect(loadPublication('usr-lea')).toEqual(record);
+    expect(loadPublication('usr-marc')).toBeNull();
+  });
+
+  it('ignores legacy records that carry no owner', () => {
+    scope.window?.sessionStorage.setItem(
+      'qui.activity-search.publication.v1',
+      JSON.stringify({ v: 1, key: newProposalKey(), inputs: inputsKey(DRAFT), signalId: 'sig-p-usr-lea-abc12345' }),
+    );
+    expect(loadPublication('usr-lea')).toBeNull();
+    expect(loadPublication('usr-marc')).toBeNull();
   });
 });

@@ -75,18 +75,19 @@ export async function publishProposal(
   };
 
   const id = proposalSignalId(request.actorId, proposalKey);
+  // Same proposer, same key, same proposal: the retry of a publication that
+  // already happened. A reused key carrying different inputs, or somebody
+  // else's signal, is a conflict — never an overwrite.
+  const settleExisting = (existing: Signal): ServiceResult<PublishProposalResult> =>
+    existing.creatorId === request.actorId &&
+    existing.geoScopeId === scope.id &&
+    existing.plan !== null &&
+    JSON.stringify(existing.plan) === JSON.stringify(plan)
+      ? ok({ signalId: id, created: false })
+      : fail('conflict');
+
   const existing = await ports.repo.getSignal(id);
-  if (existing !== null) {
-    // Same proposer, same key, same proposal: the retry of a publication that
-    // already happened. A reused key carrying different inputs, or somebody
-    // else's signal, is a conflict — never a silent overwrite.
-    const same =
-      existing.creatorId === request.actorId &&
-      existing.geoScopeId === scope.id &&
-      existing.plan !== null &&
-      JSON.stringify(existing.plan) === JSON.stringify(plan);
-    return same ? ok({ signalId: id, created: false }) : fail('conflict');
-  }
+  if (existing !== null) return settleExisting(existing);
 
   const preview = buildProposalPreview({
     practice: practiceLabel,
@@ -117,7 +118,15 @@ export async function publishProposal(
     createdAt: now,
     demo: true,
   };
-  await ports.repo.putSignal(signal);
+  // Atomic create-if-absent: of two concurrent first requests only one wins.
+  // The other reads the winner back and is settled against it — a retry of
+  // the same proposal, or a conflict — without overwriting it. Only the
+  // winning creation is recorded in analytics and audit.
+  const inserted = await ports.repo.insertSignal(signal);
+  if (!inserted) {
+    const winner = await ports.repo.getSignal(id);
+    return winner === null ? fail('conflict') : settleExisting(winner);
+  }
   await track(ports, {
     name: 'signal_created',
     actorId: request.actorId,

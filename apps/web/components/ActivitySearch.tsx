@@ -145,10 +145,13 @@ function previewFor(draft: ActivityDraft): ProposalPreview | null {
  */
 export function ActivitySearch({
   signedIn,
+  actorId,
   now,
   defaultCity,
 }: {
   signedIn: boolean;
+  /** The demo persona on this page; publication state belongs to it alone. */
+  actorId: string | null;
   now: string;
   defaultCity: DraftCity | null;
 }) {
@@ -170,6 +173,15 @@ export function ActivitySearch({
   const citySeq = useRef(createSearchSequence());
   const searchSeq = useRef(createSearchSequence());
   const resume = useRef(false);
+  const currentActor = useRef(actorId);
+  // A different persona is a different owner: drop the previous one's
+  // publication state from this page and load only the new actor's.
+  useEffect(() => {
+    currentActor.current = actorId;
+    setPublication(actorId === null ? null : loadPublication(actorId));
+    setPublishError(null);
+    setPublishing(false);
+  }, [actorId]);
 
   /**
    * Results and preview always describe the same submitted query: both are
@@ -217,7 +229,7 @@ export function ActivitySearch({
   useEffect(() => {
     const saved = loadDraft();
     if (saved !== null) setDraft({ ...saved, city: saved.city ?? defaultCity });
-    setPublication(loadPublication());
+    setPublication(actorId === null ? null : loadPublication(actorId));
     if (signedIn) resume.current = takeResumeReady();
     else clearContinuation();
     setRestored(true);
@@ -279,12 +291,13 @@ export function ActivitySearch({
    * cleared: a failure leaves everything in place for another try.
    */
   async function publish(): Promise<void> {
-    if (submitted === null || submitted.city === null || publishing) return;
+    if (submitted === null || submitted.city === null || publishing || actorId === null) return;
+    const owner = actorId;
     const inputs = inputsKey(submitted);
     const record: PublicationRecord =
-      publication !== null && publication.inputs === inputs
+      publication !== null && publication.actorId === owner && publication.inputs === inputs
         ? publication
-        : { v: 1, key: newProposalKey(), inputs, signalId: null };
+        : { v: 2, actorId: owner, key: newProposalKey(), inputs, signalId: null };
     setPublication(record);
     savePublication(record);
     setPublishing(true);
@@ -296,15 +309,18 @@ export function ActivitySearch({
       });
       if (result.ok) {
         const done: PublicationRecord = { ...record, signalId: result.value.signalId };
-        setPublication(done);
+        // Stored under its owner whatever happens next, so it is never lost.
         savePublication(done);
-      } else {
+        // Applied to this page only if it still belongs to the same actor: a
+        // late answer for a previous persona never becomes somebody else's.
+        if (currentActor.current === owner) setPublication(done);
+      } else if (currentActor.current === owner) {
         setPublishError(result.message);
       }
     } catch {
-      setPublishError(PUBLISH_FAILED);
+      if (currentActor.current === owner) setPublishError(PUBLISH_FAILED);
     } finally {
-      setPublishing(false);
+      if (currentActor.current === owner) setPublishing(false);
     }
   }
 
@@ -316,7 +332,10 @@ export function ActivitySearch({
 
   const dates = draft.city === null ? [] : upcomingLocalDates(now, draft.city.timezone, 7);
   const published =
-    submitted !== null && publication !== null && publication.inputs === inputsKey(submitted)
+    submitted !== null &&
+    publication !== null &&
+    publication.actorId === actorId &&
+    publication.inputs === inputsKey(submitted)
       ? publication.signalId
       : null;
   const ready = previewFor(draft) !== null;

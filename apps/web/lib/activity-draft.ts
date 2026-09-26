@@ -212,17 +212,24 @@ export function clearContinuation(): void {
 // Publication (ADR-0016): one key per set of inputs, kept with the draft.
 // ---------------------------------------------------------------------------
 
-export const PUBLICATION_KEY = 'qui.activity-search.publication.v1';
+/**
+ * Publication records live under this key as a map from actor id to that
+ * actor's record. Anything under the older, unowned key is never read.
+ */
+export const PUBLICATION_KEY = 'qui.activity-search.publication.v2';
 const PROPOSAL_KEY = /^[a-z0-9][a-z0-9-]{7,63}$/;
 
 /**
- * What was published — or is being published — from which inputs. The same
- * inputs reuse the same key, so a retry, a reload or a double click can only
- * ever reach the one activity the server derives from that key. Changing any
- * input makes a new proposal with a new key.
+ * What one actor published — or is publishing — from which inputs. The same
+ * actor with the same inputs reuses the same key, so a retry, a reload or a
+ * double click can only ever reach the one activity the server derives from
+ * it. Changing any input, or being somebody else, means a new proposal and a
+ * new key: a record is never shown to, or reused by, another actor.
  */
 export interface PublicationRecord {
-  readonly v: 1;
+  readonly v: 2;
+  /** The demo persona that published it. */
+  readonly actorId: string;
   readonly key: string;
   /** `inputsKey(draft)` of the inputs this key publishes. */
   readonly inputs: string;
@@ -252,33 +259,37 @@ export function newProposalKey(): string {
   return random.toLowerCase();
 }
 
-export function parsePublication(raw: string | null): PublicationRecord | null {
-  if (raw === null) return null;
+export function parsePublication(value: unknown): PublicationRecord | null {
+  if (!isRecord(value) || value['v'] !== 2) return null;
+  const { actorId, key, inputs, signalId } = value;
+  if (typeof actorId !== 'string' || actorId.length === 0) return null;
+  if (typeof key !== 'string' || !PROPOSAL_KEY.test(key) || typeof inputs !== 'string') return null;
+  if (signalId !== null && (typeof signalId !== 'string' || !signalId.startsWith('sig-p-'))) return null;
+  return { v: 2, actorId, key, inputs, signalId };
+}
+
+function readPublications(): Record<string, unknown> {
   try {
-    const value: unknown = JSON.parse(raw);
-    if (!isRecord(value) || value['v'] !== 1) return null;
-    const { key, inputs, signalId } = value;
-    if (typeof key !== 'string' || !PROPOSAL_KEY.test(key) || typeof inputs !== 'string') return null;
-    if (signalId !== null && (typeof signalId !== 'string' || !signalId.startsWith('sig-p-'))) return null;
-    return { v: 1, key, inputs, signalId };
+    const raw = storage()?.getItem(PUBLICATION_KEY) ?? null;
+    const value: unknown = raw === null ? {} : JSON.parse(raw);
+    return isRecord(value) ? value : {};
   } catch {
-    return null;
+    return {};
   }
 }
 
-export function loadPublication(): PublicationRecord | null {
-  try {
-    return parsePublication(storage()?.getItem(PUBLICATION_KEY) ?? null);
-  } catch {
-    return null;
-  }
+/** The current actor's record only; a record owned by anybody else is never returned. */
+export function loadPublication(actorId: string): PublicationRecord | null {
+  const record = parsePublication(readPublications()[actorId]);
+  return record !== null && record.actorId === actorId ? record : null;
 }
 
 export function savePublication(record: PublicationRecord): void {
   try {
-    storage()?.setItem(PUBLICATION_KEY, JSON.stringify(record));
+    const all = readPublications();
+    storage()?.setItem(PUBLICATION_KEY, JSON.stringify({ ...all, [record.actorId]: record }));
   } catch {
-    // Without storage a retry after a reload gets a fresh key; the server still
-    // refuses nothing twice within one page, because the key is kept in memory.
+    // Without storage a retry after a reload gets a fresh key; within the page
+    // the key is kept in memory, so a double click still reaches one activity.
   }
 }
