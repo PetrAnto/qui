@@ -8,3 +8,4 @@ export * from './analytics/index';
 export * from './identity/intake';
 export * from './identity/provider';
 export * from './services/index';
+export * from './activity/index';

@@ -249,9 +249,50 @@ and Event, exactly as it does today.
 | Equipment needs, contributions, interval-specific coverage | `activity/equipment.ts` | pure, tested |
 | Compatibility with reasons, deterministic ordering | `activity/match.ts` | pure, tested |
 | Honest description of existing Join/Event signals | `activity/describe.ts` | pure, tested |
+| Day/part-of-day slots to instants in the city's zone (DST-safe) | `activity/search-input.ts` | pure, tested |
+| Proposal preview built from the search inputs | `activity/preview.ts` | pure, tested |
+| Read-only activity search | `services/search.ts`, `POST /api/activities/search` | wired, tested |
+| Search → results → preview screen | `app/search`, `components/ActivitySearch.tsx` | wired, e2e |
 
-These modules are not exported from the package root. They are not wired into
-any route, service, repository or UI, and they change no permission.
+**Search, results and preview (synthetic demo).**
+
+- The search writes nothing about any person: no publish, join, response or
+  analytics event. Its only write is caching a public place row the first
+  time a worldwide city is looked up, as city switching already does.
+- Its candidates are exactly what the Signals list already shows the viewer.
+  Both go through one policy, `canViewSignal`, which removes the following
+  *before* projection and matching, so they are neither shown nor counted:
+  - removed content;
+  - blocked pairs;
+  - suspended or distribution-restricted authors (INV-SUSPEND-1; the author
+    still sees their own);
+  - adult-only audiences, for minors.
+
+  Only open Join/Event signals are matched.
+
+  Direct access is a separate, lower floor. The signal page (by link) and a
+  person's profile use `canReadSignal`: removed, blocked, a suspended author
+  and adult-only-for-minors are hidden there too. A restricted author's signal
+  stays readable by direct link, because restriction removes amplification,
+  not the content.
+- Every seeded signal has a start but no end time, so its honest best result is
+  "Needs confirmation".
+- The form works without a session. The draft lives only in this tab's
+  `sessionStorage`; it never goes into a URL, and the search request is a POST.
+- The search itself requires the demo identity. Onboarding returns to `/search`
+  through an allow-listed return path, with the inputs intact.
+- The preview is built from the same inputs, including when nothing matches,
+  and states only what was supplied:
+  - "free, preferably" is not a confirmed free cost;
+  - equipment is "not specified", never "none needed";
+  - an empty result reads "no matching activity found for these criteria".
+
+  The screen says publication is not available in the demo; the underlying
+  policy (P5) is still open.
+- **Anonymous results are not offered.** An identity-free anonymous projection
+  remains an open decision.
+
+The modules change no permission.
 
 Runtime participation fixes. These restrict; they do not widen:
 

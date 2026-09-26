@@ -1,4 +1,4 @@
-import type { Post, Report, ModerationCase } from '../types';
+import type { Post, Report, ModerationCase, Signal } from '../types';
 import { canSeeAudience, isAdult, isMinor } from './age';
 import { ALLOW, all, deny, requireActive, type ActorView, type Decision } from './decision';
 import type { SafetyGraph } from './graph';
@@ -40,6 +40,55 @@ export function canViewPost(
   if (author.accountState === 'suspended') return deny('author_suspended');
   if (post.state === 'distribution_restricted') return deny('distribution_restricted');
   return canSeeAudience(viewer, post.audience);
+}
+
+/**
+ * Whether a viewer may read a signal at all — including by direct link. This
+ * is the floor every surface applies before loading or projecting anything
+ * about the signal:
+ *
+ *  - removed content is gone for everybody;
+ *  - INV-BLOCK-1: a blocked pair never sees each other's signals;
+ *  - INV-SUSPEND-1: a suspended author's content disappears for everyone
+ *    else, while the author keeps read access to their own state;
+ *  - INV-AGE-4: adult-audience signals never reach a minor.
+ *
+ * A distribution-restricted author is *not* hidden here: restriction removes
+ * amplification, not the content, so a direct link still works.
+ */
+export function canReadSignal(
+  viewer: ActorView,
+  signal: Signal,
+  author: ActorView,
+  graph: SafetyGraph,
+): Decision {
+  if (signal.state === 'removed') return deny('content_removed');
+  if (viewer.id === author.id) return ALLOW;
+  if (graph.isBlockedBetween(viewer.id, author.id)) return deny('blocked');
+  if (author.accountState === 'suspended') return deny('author_suspended');
+  return canSeeAudience(viewer, signal.audience);
+}
+
+/**
+ * Whether a signal may be *distributed* to a viewer — listed in Signals,
+ * returned by activity search, or anywhere else it is offered for discovery.
+ * Everything `canReadSignal` refuses, plus a distribution-restricted author's
+ * signals for anyone but the author (INV-SUSPEND-1: the account keeps its
+ * voice but loses amplification). Applied before projection, ranking or
+ * matching, so hidden signals are removed, not demoted or counted.
+ */
+export function canViewSignal(
+  viewer: ActorView,
+  signal: Signal,
+  author: ActorView,
+  graph: SafetyGraph,
+): Decision {
+  const readable = canReadSignal(viewer, signal, author, graph);
+  if (!readable.allowed) return readable;
+  if (viewer.id !== author.id && author.accountState === 'distribution_restricted') {
+    return deny('distribution_restricted');
+  }
+  return ALLOW;
 }
 
 /** Media never has a looser rule than the post carrying it. */

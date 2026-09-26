@@ -32,6 +32,9 @@ export default defineConfig({
         },
       },
       {
+        // The app's tsconfig preserves JSX for Next; tests that render a page
+        // need it compiled, with the automatic runtime Next itself uses.
+        esbuild: { jsx: 'automatic' },
         test: {
           name: 'web',
           root: './apps/web',

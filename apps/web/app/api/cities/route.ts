@@ -21,6 +21,9 @@ export async function GET(request: Request): Promise<Response> {
       name: scope.name,
       countryCode: scope.countryCode,
       label: describeScope(scope.id),
+      // A place's zone is public reference data; the activity search needs it to
+      // show times as they read locally, before any session exists.
+      timezone: scope.timezone,
     })),
   });
 }

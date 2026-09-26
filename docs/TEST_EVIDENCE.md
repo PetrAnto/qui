@@ -10,20 +10,23 @@ Updated: **2026-09-25** (branch `feat/activity-foundations`: participation
 fixes, `INV-OUTCOME-1`, pure activity modules; counts below re-run on that
 branch, Node 22.23.1, `vitest run --maxWorkers=1`; re-run after the review
 rounds on `b904670` and `258dd44`).
+Updated: **2026-09-25** (branch `feat/activity-search-preview`: activity search,
+results and proposal preview; same command).
 
 ## Unit and integration suite — PASSING
 
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  19 passed (19)
-     Tests  278 passed (278)
+Test Files  24 passed (24)
+     Tests  334 passed (334)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 43 |
+| core | `test/safety-invariants.test.ts` | 45 |
 | core | `test/activity.test.ts` | 45 |
+| core | `test/search-input.test.ts` | 9 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
@@ -31,13 +34,17 @@ Test Files  19 passed (19)
 | db | `test/d1.test.ts` | 18 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
+| db | `test/search.test.ts` | 11 |
+| db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
-| web | `test/api.test.ts` | 13 |
+| web | `test/api.test.ts` | 17 |
+| web | `test/activity-draft.test.ts` | 12 |
+| web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
@@ -49,14 +56,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **43
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **45
 tests** in `safety-invariants.test.ts` cover the 18 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
 `INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 43.
+`analytics.test.ts`, so the gate reports more than 45.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -102,6 +109,50 @@ preferred overlap not counting). The other two (same non-Latin practice,
 canonical equivalence) passed only because both sides normalised to an empty
 key, which is the defect itself.
 
+2026-09-26, correction round on PR #46 at `5912b5f`: regressions for four
+defects.
+- INV-SUSPEND-1 was not enforced in the Signals list or in search.
+- A stored draft with an invalid time zone crashed `/search`.
+- A failed search request left the page stuck.
+- The preview made statements the inputs did not support.
+
+Run against `5912b5f`, **11 unit tests failed**:
+- 1 policy test (`canViewSignal`);
+- 2 draft tests (the invalid zone was accepted);
+- 4 preview tests;
+- 4 service-level visibility tests (suspended or restricted authors listed and
+  counted).
+
+The 3 that passed assert preserved behaviour: an active author stays visible,
+and a suspended or restricted author still sees their own signal.
+
+2026-09-26, direct access at `a1b0e26`. `getSignalDetail` still returned a
+suspended author's signal to other viewers, and an adults-only signal to a
+minor. The rendered page then showed its title and body above the refusal.
+
+Run against `a1b0e26`, **5 tests failed**:
+- 1 policy test (`canReadSignal` did not exist);
+- 2 service tests (suspended author, adults-only for a minor);
+- 2 rendered-page tests (`app/signals/[id]/page.tsx` rendered the forbidden
+  title and body instead of calling `notFound()`).
+
+Codex review `5325186342` on `ecbac11` raised two findings.
+- A restored draft was sent on any signed-in visit.
+- City suggestions outlived their query, and a failed lookup was unhandled.
+
+The regressions were run against `ecbac11`: **4 unit tests** (the resume
+marker) and **all 5 e2e scenarios** failed. In the e2e, a reload re-sent the
+search, an ordinary visit sent it twice, an abandoned sign-in fired it later,
+stale suggestions stayed, and a failed lookup showed no message.
+
+A sixth regression, a minor seeing an adults-only signal listed on its author's
+profile, failed before the one-line fix in `getProfile`. The tests that passed
+throughout assert preserved behaviour: the author's own access, a restricted
+author's direct link, an adult's access, and the block and removal rules.
+Against the `5912b5f` production build, all **3 changed or new e2e tests
+failed**: the invalid-zone page crashed, the retry button stayed disabled, and
+the old preview wording was shown.
+
 ## End-to-end suite — PASSING
 
 `e2e/mobile-smoke.spec.ts` contains **16 Playwright tests** on a Pixel 7
@@ -118,7 +169,28 @@ defect (#30, fixed in #31): stale selection cleared on edit, a slow older
 search never overwriting newer results, clearing not undone by a late
 response, no reopening after selection, and switcher persistence across
 reload. The races are made deterministic by holding specific HTTP responses at
-the network layer. Total e2e: **21 tests**.
+the network layer.
+
+`e2e/activity-search.spec.ts` adds **9 tests** for activity search:
+- anonymous search → preview → reload → demo onboarding → back on `/search`
+  with every input restored and results shown;
+- no results still offers the proposal preview, worded only from what was
+  supplied;
+- the entry point from Signals;
+- a stored draft with an invalid time zone is dropped without a crash;
+- a failed search releases the page, keeps the draft, retries successfully,
+  and clears stale results while a replacement request runs;
+- an ordinary visit or reload restores a draft without sending it, and the
+  onboarding return searches exactly once;
+- an abandoned sign-in never fires the search later;
+- city suggestions are cleared when the text changes, and an outdated
+  response never brings them back;
+- a failed city lookup offers a retry that works.
+
+The journey tests assert that no publish, join or respond request is sent.
+
+Total e2e: **30 tests**. Where they were executed for this branch is recorded in
+its pull request.
 
 Recorded local runs:
 
