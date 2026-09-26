@@ -100,6 +100,10 @@ and matched through the existing matcher.
 - A hostless proposal is a dead end until host designation exists. It can be
   found, but nobody can join it yet.
 - Without P6, a minor cannot propose.
+- **The proposer cannot withdraw.** Closing is a host power and a proposal has
+  no host, so a published proposal ends only when its last window passes
+  (`expiresAt`) or through moderation. Author withdrawal is not a power over
+  anyone else, but it is an owner decision that has not been made yet.
 
 **Neutral.** The D1 adapter reads `hostId` as the creator for every stored row
 and refuses to persist a proposal. Production persistence of proposals is out
