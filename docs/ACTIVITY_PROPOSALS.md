@@ -269,6 +269,12 @@ and Event, exactly as it does today.
   - adult-only audiences, for minors.
 
   Only open Join/Event signals are matched.
+
+  Direct access is a separate, lower floor. The signal page (by link) and a
+  person's profile use `canReadSignal`: removed, blocked, a suspended author
+  and adult-only-for-minors are hidden there too. A restricted author's signal
+  stays readable by direct link, because restriction removes amplification,
+  not the content.
 - Every seeded signal has a start but no end time, so its honest best result is
   "Needs confirmation".
 - The form works without a session. The draft lives only in this tab's

@@ -1,5 +1,6 @@
 import { buildClusterReport, type ClusterReport } from '../analytics/clusters';
 import { canDiscoverUser, canViewPost, canViewProfile,
+  canReadSignal,
   canViewSignal,
 } from '../policy/access';
 import { canPublishInGeo, toActorView } from '../policy/capabilities';
@@ -255,8 +256,13 @@ export async function getProfile(
     })
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
+  // The same reading floor as a direct link: an adults-only signal never
+  // reaches a minor through somebody's profile either (INV-AGE-4).
   const openSignals = signals.filter(
-    (signal) => signal.creatorId === person.id && signal.state === 'open',
+    (signal) =>
+      signal.creatorId === person.id &&
+      signal.state === 'open' &&
+      canReadSignal(context.viewer, signal, subject, context.graph).allowed,
   );
   const participants = await ports.repo.listParticipants();
   const publicSignals = openSignals.map((signal) =>
@@ -384,16 +390,14 @@ export async function getSignalDetail(
   const context = await loadReadContext(ports, input.viewerId);
   if (context === null) return null;
   const signal = await ports.repo.getSignal(input.signalId);
-  if (signal === null || signal.state === 'removed') return null;
+  if (signal === null) return null;
   const creator = context.people.get(signal.creatorId);
   const creatorView = context.actors.get(signal.creatorId);
   if (creator === undefined || creatorView === undefined) return null;
-  if (
-    signal.creatorId !== input.viewerId &&
-    context.graph.isBlockedBetween(input.viewerId, signal.creatorId)
-  ) {
-    return null;
-  }
+  // Checked before anything else about the signal is loaded or projected. A
+  // refusal is indistinguishable from a signal that does not exist, so the
+  // page shows its plain not-found rather than a title with a refusal notice.
+  if (!canReadSignal(context.viewer, signal, creatorView, context.graph).allowed) return null;
 
   const [participants, responses] = await Promise.all([
     ports.repo.listParticipants(signal.id),

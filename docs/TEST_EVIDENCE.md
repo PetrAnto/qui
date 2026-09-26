@@ -18,13 +18,13 @@ results and proposal preview; same command).
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  23 passed (23)
-     Tests  318 passed (318)
+Test Files  24 passed (24)
+     Tests  330 passed (330)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 44 |
+| core | `test/safety-invariants.test.ts` | 45 |
 | core | `test/activity.test.ts` | 45 |
 | core | `test/search-input.test.ts` | 9 |
 | core | `test/capabilities.test.ts` | 10 |
@@ -35,7 +35,7 @@ Test Files  23 passed (23)
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
 | db | `test/search.test.ts` | 11 |
-| db | `test/signal-visibility.test.ts` | 7 |
+| db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
 | db | `test/onboarding.test.ts` | 8 |
 | db | `test/schema.test.ts` | 7 |
@@ -44,6 +44,7 @@ Test Files  23 passed (23)
 | web | `test/ui.test.ts` | 14 |
 | web | `test/api.test.ts` | 17 |
 | web | `test/activity-draft.test.ts` | 8 |
+| web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
@@ -55,14 +56,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **44
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **45
 tests** in `safety-invariants.test.ts` cover the 18 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
 `INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 44.
+`analytics.test.ts`, so the gate reports more than 45.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -124,6 +125,21 @@ Run against `5912b5f`, **11 unit tests failed**:
 
 The 3 that passed assert preserved behaviour: an active author stays visible,
 and a suspended or restricted author still sees their own signal.
+
+2026-09-26, direct access at `a1b0e26`. `getSignalDetail` still returned a
+suspended author's signal to other viewers, and an adults-only signal to a
+minor. The rendered page then showed its title and body above the refusal.
+
+Run against `a1b0e26`, **5 tests failed**:
+- 1 policy test (`canReadSignal` did not exist);
+- 2 service tests (suspended author, adults-only for a minor);
+- 2 rendered-page tests (`app/signals/[id]/page.tsx` rendered the forbidden
+  title and body instead of calling `notFound()`).
+
+A sixth regression, a minor seeing an adults-only signal listed on its author's
+profile, failed before the one-line fix in `getProfile`. The tests that passed
+throughout assert preserved behaviour: the author's own access, a restricted
+author's direct link, an adult's access, and the block and removal rules.
 Against the `5912b5f` production build, all **3 changed or new e2e tests
 failed**: the invalid-zone page crashed, the retry button stayed disabled, and
 the old preview wording was shown.

@@ -10,6 +10,7 @@ import {
   canViewModerationCase,
   canViewPost,
   canViewProfile,
+  canReadSignal,
   canViewReport,
   canViewSignal,
 } from '../src/policy/access';
@@ -533,6 +534,30 @@ describe('INV-SUSPEND-1 suspended and restricted accounts respect policy', () =>
     expect(
       canViewSignal(minor, signal('s-c', 'author', 'join', { audience: 'adults_only' }), active, graph).reason,
     ).toBe('adults_only_content');
+  });
+
+  it('separates reading a signal directly from having it distributed', () => {
+    const viewer = actor('viewer');
+    const minor = actor('minor', { ageBand: 'minor_15_17' });
+    const suspended = actor('author', { accountState: 'suspended' });
+    const restricted = actor('author', { accountState: 'distribution_restricted' });
+    const own = signal('s-d', 'author', 'join');
+
+    // Suspension: gone for everyone else, even by direct link; kept for the author.
+    expect(canReadSignal(viewer, own, suspended, graph).reason).toBe('author_suspended');
+    expect(canReadSignal(suspended, own, suspended, graph).allowed).toBe(true);
+    // Restriction: out of discovery, still readable by direct link.
+    expect(canViewSignal(viewer, own, restricted, graph).reason).toBe('distribution_restricted');
+    expect(canReadSignal(viewer, own, restricted, graph).allowed).toBe(true);
+    // Age audience and blocks apply to direct reading too.
+    const adults = signal('s-e', 'author', 'join', { audience: 'adults_only' });
+    expect(canReadSignal(minor, adults, actor('author'), graph).reason).toBe('adults_only_content');
+    expect(canReadSignal(viewer, adults, actor('author'), graph).allowed).toBe(true);
+    const blocked = createSafetyGraph([{ id: 'b2', blockerId: 'author', blockedId: 'viewer', createdAt: T0 }]);
+    expect(canReadSignal(viewer, own, actor('author'), blocked).reason).toBe('blocked');
+    // Removed content is gone for everybody.
+    const removed = signal('s-f', 'author', 'join', { state: 'removed' });
+    expect(canReadSignal(actor('author'), removed, actor('author'), graph).reason).toBe('content_removed');
   });
 
   it('stops a suspended account from responding to anything', () => {

@@ -43,21 +43,20 @@ export function canViewPost(
 }
 
 /**
- * Whether a viewer may see a signal at all — in the Signals list, in activity
- * search, or anywhere a signal is listed for discovery. Applied before any
- * projection, ranking or matching, so hidden signals are removed, not demoted
- * or counted.
+ * Whether a viewer may read a signal at all — including by direct link. This
+ * is the floor every surface applies before loading or projecting anything
+ * about the signal:
  *
- *  - INV-BLOCK-1: a blocked pair never sees each other's signals.
+ *  - removed content is gone for everybody;
+ *  - INV-BLOCK-1: a blocked pair never sees each other's signals;
  *  - INV-SUSPEND-1: a suspended author's content disappears for everyone
- *    else; a distribution-restricted author keeps their voice but loses
- *    amplification, so their signals are not distributed to others.
+ *    else, while the author keeps read access to their own state;
  *  - INV-AGE-4: adult-audience signals never reach a minor.
  *
- * The author always sees their own signal: a suspended or restricted account
- * keeps read access to its own state (INV-SUSPEND-1).
+ * A distribution-restricted author is *not* hidden here: restriction removes
+ * amplification, not the content, so a direct link still works.
  */
-export function canViewSignal(
+export function canReadSignal(
   viewer: ActorView,
   signal: Signal,
   author: ActorView,
@@ -67,8 +66,29 @@ export function canViewSignal(
   if (viewer.id === author.id) return ALLOW;
   if (graph.isBlockedBetween(viewer.id, author.id)) return deny('blocked');
   if (author.accountState === 'suspended') return deny('author_suspended');
-  if (author.accountState === 'distribution_restricted') return deny('distribution_restricted');
   return canSeeAudience(viewer, signal.audience);
+}
+
+/**
+ * Whether a signal may be *distributed* to a viewer — listed in Signals,
+ * returned by activity search, or anywhere else it is offered for discovery.
+ * Everything `canReadSignal` refuses, plus a distribution-restricted author's
+ * signals for anyone but the author (INV-SUSPEND-1: the account keeps its
+ * voice but loses amplification). Applied before projection, ranking or
+ * matching, so hidden signals are removed, not demoted or counted.
+ */
+export function canViewSignal(
+  viewer: ActorView,
+  signal: Signal,
+  author: ActorView,
+  graph: SafetyGraph,
+): Decision {
+  const readable = canReadSignal(viewer, signal, author, graph);
+  if (!readable.allowed) return readable;
+  if (viewer.id !== author.id && author.accountState === 'distribution_restricted') {
+    return deny('distribution_restricted');
+  }
+  return ALLOW;
 }
 
 /** Media never has a looser rule than the post carrying it. */
