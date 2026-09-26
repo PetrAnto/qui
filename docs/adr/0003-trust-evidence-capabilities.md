@@ -37,6 +37,12 @@ bundle **at read time**:
 | `host` | 18+ and a local tie |
 | `vouch` | 18+ and a local tie |
 | `invite` | verified email |
+
+*Added by [ADR-0016](0016-activity-proposals-without-host.md) (owner decision
+P5, adult-only synthetic demo).* **Proposing** an activity is a separate
+action, not a capability in this set. It requires an active adult account,
+`publish`, and any attachment to that city, `exploring` included. It grants
+no `host` power.
 | `respond_to_unknown_people` | verified email |
 | `appear_in_people_discovery` | verified email, not distribution-restricted |
 

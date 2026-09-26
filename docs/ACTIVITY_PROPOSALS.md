@@ -179,13 +179,18 @@ age and locality rules.
 
 ## 3. Proposed policy amendments (HYPOTHESIS — owner decisions required)
 
+**Owner decision, 2026-09-26:** **P1 and P5 are approved** for the adult-only
+synthetic demo and recorded in
+[ADR-0016](adr/0016-activity-proposals-without-host.md). Designating a host (the
+rest of P1) is not implemented yet. **P2–P4 and P6–P7 remain unapproved.**
+
 | # | Rule | Proposed exact change | Kind |
 |---|---|---|---|
-| P1 | `INV-HOST-2` / ADR-0010: host power "is granted only to that object's creator" | "…granted only to that object's **designated host**: one adult with a local tie to that place, confirmed by the proposer. A proposal with no designated host has no host powers." | LOCKED text |
+| P1 — **approved** (ADR-0016) | `INV-HOST-2` / ADR-0010: host power "is granted only to that object's creator" | "…granted only to that object's **designated host**: one adult with a local tie to that place, confirmed by the proposer. A proposal with no designated host has no host powers." | LOCKED text |
 | P2 | `INV-DM-1` / ADR-0012: a thread exists only after an accepted response to a live signal | Add a second thread kind: "An activity group thread exists only as a consequence of joining a live Join activity; its members are that activity's members; nothing opens it from a profile, handle or user id." | LOCKED text |
 | P3 | `INV-AGE-2`: cross-band contact only "in hosted group contexts, where a host is present" | Define it as: "a designated adult host is a member **and** the group has at least three members. Otherwise the space is read-only for cross-band writing." | LOCKED text (tightening) |
 | P4 | `INV-BLOCK-1`: "an existing thread freezes" | See below. | LOCKED text |
-| P5 | `createSignal` requires `host` (18+, local tie) for any Join | See below. | Policy amendment, **proposed** |
+| P5 — **approved** (ADR-0016, adults only) | `createSignal` requires `host` (18+, local tie) for any Join | See below. | Policy amendment |
 | P6 | Proposals originated by minors | Visible and joinable only within the 15–17 band, with no adult host. For real users, gated on an age-threshold attestation. | Privacy / permissions |
 | P7 | Participant list visibility | Identities visible to members and host only; everyone else sees counts and coverage. This changes current Join/Event pages. | Privacy |
 
@@ -217,7 +222,7 @@ Keep "the thread freezes" for two-person threads. For group activities:
    - The rule lowers the signal; it does not remove it. Nothing here is
      presented as a guarantee of separation.
 
-### P5 — who may propose (proposed)
+### P5 — who may propose (approved for adults, ADR-0016)
 
 1. **Proposing** a hostless Join requires:
    - an active account with `publish` (verified email);
@@ -234,8 +239,9 @@ Keep "the thread freezes" for two-person threads. For group activities:
 4. A hostless proposal has no host powers and no response-approval path until a
    host is designated (P1).
 
-Until this is approved, `createSignal` keeps requiring `host` for every Join
-and Event, exactly as it does today.
+As approved, proposing also requires the **adult** band, because P6 is not
+approved. `createSignal` itself is unchanged: creating a hosted Join or Event
+still requires `host`. Proposals go through `publishProposal`.
 
 ---
 
