@@ -21,9 +21,11 @@ import {
 import {
   DURATIONS,
   EMPTY_DRAFT,
+  clearContinuation,
   loadDraft,
   rememberReturnTo,
   saveDraft,
+  takeResumeReady,
   type ActivityDraft,
   type DraftCity,
 } from '../lib/activity-draft';
@@ -55,6 +57,8 @@ const OUTCOME_MARKS: Readonly<Record<MatchReason['outcome'], string>> = {
   unknown: '?',
   info: '·',
 };
+
+const CITY_FAILED = 'Could not look up cities. Check your connection and try again.';
 
 const SEARCH_FAILED =
   'The search could not be completed. Check your connection and try again — your search is kept.';
@@ -133,13 +137,14 @@ export function ActivitySearch({
   const [restored, setRestored] = useState(false);
   const [cityQuery, setCityQuery] = useState('');
   const [cityResults, setCityResults] = useState<readonly CityResult[]>([]);
+  const [cityError, setCityError] = useState<string | null>(null);
   const [view, setView] = useState<ActivitySearchView | null>(null);
   const [preview, setPreview] = useState<ProposalPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const citySeq = useRef(createSearchSequence());
   const searchSeq = useRef(createSearchSequence());
-  const autoRan = useRef(false);
+  const resume = useRef(false);
 
   /**
    * Results and preview always describe the same submitted query: both are
@@ -182,21 +187,28 @@ export function ActivitySearch({
   }
 
   // Restore once, after hydration: storage is not available on the server.
+  // Restoring never sends anything. Only the one-time continuation marker —
+  // set by a finished onboarding after "Continue with demo access" — lets the
+  // restored draft be searched on arrival, and it is consumed here, before
+  // any request. Arriving without a session means that continuation was
+  // abandoned, so it is dropped.
   useEffect(() => {
     const saved = loadDraft();
     if (saved !== null) setDraft({ ...saved, city: saved.city ?? defaultCity });
+    if (signedIn) resume.current = takeResumeReady();
+    else clearContinuation();
     setRestored(true);
-  }, [defaultCity]);
+  }, [defaultCity, signedIn]);
 
   useEffect(() => {
     if (restored) saveDraft(draft);
   }, [draft, restored]);
 
-  // Coming back from the demo identity flow with a complete draft: run the
-  // search the person had asked for, once. Still only a read.
+  // Coming back from a finished onboarding with a complete draft: run the
+  // search the person had asked for, exactly once. Still only a read.
   useEffect(() => {
-    if (!restored || autoRan.current || !signedIn) return;
-    autoRan.current = true;
+    if (!restored || !resume.current || !signedIn) return;
+    resume.current = false;
     if (previewFor(draft) !== null) void runSearch(draft);
   }, [restored]);
 
@@ -204,17 +216,28 @@ export function ActivitySearch({
     setDraft((current) => ({ ...current, ...patch }));
   }
 
+  /**
+   * Suggestions always answer the text on screen: they are cleared the moment
+   * the text changes, a slower answer (or failure) for older text is ignored,
+   * and a failed lookup says so instead of leaving old rows selectable.
+   */
   async function searchCity(value: string): Promise<void> {
     setCityQuery(value);
+    setCityResults([]);
+    setCityError(null);
     if (value.trim().length === 0) {
       citySeq.current.cancel();
-      setCityResults([]);
       return;
     }
     const token = citySeq.current.begin();
-    const result = await api.get<{ cities: CityResult[] }>(`/api/cities?q=${encodeURIComponent(value)}`);
-    if (!citySeq.current.isCurrent(token)) return;
-    if (result.ok) setCityResults(result.value.cities.filter((city) => city.timezone !== null));
+    try {
+      const result = await api.get<{ cities: CityResult[] }>(`/api/cities?q=${encodeURIComponent(value)}`);
+      if (!citySeq.current.isCurrent(token)) return;
+      if (result.ok) setCityResults(result.value.cities.filter((city) => city.timezone !== null));
+      else setCityError(CITY_FAILED);
+    } catch {
+      if (citySeq.current.isCurrent(token)) setCityError(CITY_FAILED);
+    }
   }
 
   function chooseCity(city: CityResult): void {
@@ -222,6 +245,7 @@ export function ActivitySearch({
     citySeq.current.cancel();
     setCityQuery('');
     setCityResults([]);
+    setCityError(null);
     update({ city: { id: city.id, name: city.name, timezone: city.timezone }, slots: [] });
   }
 
@@ -273,6 +297,14 @@ export function ActivitySearch({
               onChange={(event) => void searchCity(event.target.value)}
             />
           </label>
+          {cityError !== null ? (
+            <div className="notice notice--warn row row--wrap">
+              <span>{cityError}</span>
+              <button type="button" className="btn btn--small" onClick={() => void searchCity(cityQuery)}>
+                Try again
+              </button>
+            </div>
+          ) : null}
           {cityResults.length > 0 ? (
             <div className="searchresults">
               {cityResults.map((city) => (

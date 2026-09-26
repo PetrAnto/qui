@@ -4,11 +4,14 @@ import {
   DRAFT_KEY,
   EMPTY_DRAFT,
   RETURN_KEY,
+  clearContinuation,
   loadDraft,
+  markResumeReady,
   parseDraft,
   rememberReturnTo,
   saveDraft,
   serializeDraft,
+  takeResumeReady,
   takeReturnTo,
   type ActivityDraft,
 } from '../lib/activity-draft';
@@ -82,7 +85,7 @@ describe('the activity-search draft', () => {
     saveDraft(DRAFT);
     // Nothing about the draft is encoded in the only navigation target it uses.
     rememberReturnTo('/search');
-    expect(scope.window?.sessionStorage.getItem(RETURN_KEY)).toBe('/search');
+    expect(scope.window?.sessionStorage.getItem(RETURN_KEY)).not.toContain('climbing');
   });
 });
 
@@ -121,5 +124,42 @@ describe('returning after the demo identity flow', () => {
     expect(loadDraft()).toBeNull();
     expect(takeReturnTo()).toBeNull();
     expect(() => saveDraft(DRAFT)).not.toThrow();
+  });
+});
+
+describe('resuming a search after the demo identity flow', () => {
+  it('resumes exactly once, and only after the explicit continue and a finished onboarding', () => {
+    // An ordinary visit or reload: nothing to resume.
+    expect(takeResumeReady()).toBe(false);
+
+    rememberReturnTo('/search'); // "Continue with demo access"
+    expect(takeResumeReady()).toBe(false); // not before onboarding finishes
+    expect(takeReturnTo()).toBe('/search'); // onboarding finishes…
+    markResumeReady(); // …and hands the resumption to /search
+    expect(takeResumeReady()).toBe(true);
+    expect(takeResumeReady()).toBe(false); // consumed
+  });
+
+  it('lets an abandoned continuation expire instead of firing later', () => {
+    rememberReturnTo('/search');
+    clearContinuation(); // back on /search without a session: the flow was abandoned
+    expect(takeReturnTo()).toBeNull();
+    expect(takeResumeReady()).toBe(false);
+  });
+
+  it('ignores stale markers', () => {
+    const old = Date.now() - 2 * 60 * 60 * 1000;
+    scope.window?.sessionStorage.setItem(RETURN_KEY, JSON.stringify({ path: '/search', at: old }));
+    expect(takeReturnTo()).toBeNull();
+    markResumeReady();
+    const raw = scope.window?.sessionStorage.getItem('qui.activity-search.resume.v1') ?? '';
+    scope.window?.sessionStorage.setItem('qui.activity-search.resume.v1', raw.replace(/"at":\d+/, `"at":${old}`));
+    expect(takeResumeReady()).toBe(false);
+  });
+
+  it('falls back to a manual search when storage is unavailable', () => {
+    delete scope.window;
+    expect(() => markResumeReady()).not.toThrow();
+    expect(takeResumeReady()).toBe(false);
   });
 });

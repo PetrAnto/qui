@@ -24,6 +24,15 @@ function watchForWrites(page: Page): string[] {
   return writes;
 }
 
+/** Counts search requests actually sent to the server. */
+function countSearches(page: Page): { count: number } {
+  const counter = { count: 0 };
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/activities/search') counter.count += 1;
+  });
+  return counter;
+}
+
 async function chooseCity(page: Page, name: string): Promise<void> {
   await page.getByLabel('Search a city').fill(name);
   await page.getByRole('button', { name: new RegExp(name) }).first().click();
@@ -32,6 +41,7 @@ async function chooseCity(page: Page, name: string): Promise<void> {
 
 test('keeps a search through the demo sign-in, then shows what is open', async ({ page }) => {
   const writes = watchForWrites(page);
+  const searches = countSearches(page);
 
   await page.goto('/search');
   await expect(page.getByRole('heading', { name: 'Find something to do' })).toBeVisible();
@@ -68,6 +78,13 @@ test('keeps a search through the demo sign-in, then shows what is open', async (
   await expect(page.getByText('Needs confirmation')).toBeVisible();
   await expect(page.getByText('Starts Tue 16:00; end time not given')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'climbing in Lyon' })).toBeVisible();
+  // The one resumed search — and only one, even after a reload.
+  expect(searches.count).toBe(1);
+  await page.reload();
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+  await page.waitForLoadState('networkidle');
+  expect(searches.count).toBe(1);
+  await expect(page.getByRole('heading', { name: 'Open activities' })).toHaveCount(0);
 
   expect(writes).toEqual([]);
 });
@@ -168,4 +185,92 @@ test('recovers from a failed search, keeps the draft, and a retry works', async 
   release();
   await expect(page.getByRole('heading', { name: 'bouldering in Lyon' })).toBeVisible();
   await expect(page.getByText('No matching activity found for these criteria in Lyon.')).toBeVisible();
+});
+
+test('an ordinary visit restores a saved draft without sending it', async ({ page }) => {
+  await onboard(page, '31');
+  await page.goto('/search');
+  await page.getByLabel('What do you want to do?').fill('climbing');
+  await chooseCity(page, 'Lyon');
+  await page.getByRole('button', { name: 'Tue 18 Aug afternoon: not free' }).click();
+
+  const searches = countSearches(page);
+  await page.reload();
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+  await page.goto('/signals');
+  await page.getByRole('link', { name: 'Find something to do' }).click();
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+  await page.waitForLoadState('networkidle');
+  expect(searches.count).toBe(0);
+  await expect(page.getByRole('heading', { name: 'Open activities' })).toHaveCount(0);
+});
+
+test('an abandoned sign-in does not fire the search later', async ({ page }) => {
+  await page.goto('/search');
+  await page.getByLabel('What do you want to do?').fill('climbing');
+  await chooseCity(page, 'Lyon');
+  await page.getByRole('button', { name: 'Tue 18 Aug afternoon: not free' }).click();
+  await page.getByRole('button', { name: 'Show my proposal' }).click();
+  await page.getByRole('button', { name: 'Continue with demo access' }).click();
+  await expect(page).toHaveURL(/\/welcome/);
+
+  // The person comes back to the search instead of finishing — then signs in later, separately.
+  await page.goto('/search');
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+  const searches = countSearches(page);
+  await onboard(page, '31');
+  await expect(page).not.toHaveURL(/\/search$/);
+  await page.goto('/search');
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+  await page.waitForLoadState('networkidle');
+  expect(searches.count).toBe(0);
+});
+
+test('city suggestions never outlive the text they answered', async ({ page }) => {
+  await page.goto('/search');
+  const input = page.getByLabel('Search a city');
+
+  let hold: (() => void) | null = null;
+  await page.route('**/api/cities?q=*', async (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    if (q === 'Lyon' && hold === null) {
+      await new Promise<void>((resolve) => (hold = resolve));
+    }
+    await route.continue();
+  });
+
+  // Replaced text clears the old rows at once.
+  await input.fill('Montpellier');
+  await expect(page.getByRole('button', { name: /Montpellier/ }).first()).toBeVisible();
+  await input.fill('Lyon');
+  await expect(page.getByRole('button', { name: /Montpellier/ })).toHaveCount(0);
+
+  // A newer query answers first; the held, older one must not come back.
+  await input.fill('Marseille');
+  await expect(page.getByRole('button', { name: /Marseille/ }).first()).toBeVisible();
+  (hold as (() => void) | null)?.();
+  await page.waitForTimeout(300);
+  await expect(page.getByRole('button', { name: /^Lyon/ })).toHaveCount(0);
+});
+
+test('recovers from a failed city lookup', async ({ page }) => {
+  await page.goto('/search');
+  let failures = 1;
+  await page.route('**/api/cities?q=*', async (route) => {
+    if (failures > 0) {
+      failures -= 1;
+      await route.abort('failed');
+      return;
+    }
+    await route.continue();
+  });
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+
+  await page.getByLabel('Search a city').fill('Lyon');
+  await expect(page.getByText('Could not look up cities. Check your connection and try again.')).toBeVisible();
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await page.getByRole('button', { name: /Lyon/ }).first().click();
+  await expect(page.getByText('City: Lyon')).toBeVisible();
+  expect(errors).toEqual([]);
 });

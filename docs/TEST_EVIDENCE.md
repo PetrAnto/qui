@@ -19,7 +19,7 @@ results and proposal preview; same command).
 
 ```
 Test Files  24 passed (24)
-     Tests  330 passed (330)
+     Tests  334 passed (334)
 ```
 
 | Project | File | Tests |
@@ -43,7 +43,7 @@ Test Files  24 passed (24)
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
 | web | `test/api.test.ts` | 17 |
-| web | `test/activity-draft.test.ts` | 8 |
+| web | `test/activity-draft.test.ts` | 12 |
 | web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
@@ -136,6 +136,15 @@ Run against `a1b0e26`, **5 tests failed**:
 - 2 rendered-page tests (`app/signals/[id]/page.tsx` rendered the forbidden
   title and body instead of calling `notFound()`).
 
+Codex review `5325186342` on `ecbac11` raised two findings.
+- A restored draft was sent on any signed-in visit.
+- City suggestions outlived their query, and a failed lookup was unhandled.
+
+The regressions were run against `ecbac11`: **4 unit tests** (the resume
+marker) and **all 5 e2e scenarios** failed. In the e2e, a reload re-sent the
+search, an ordinary visit sent it twice, an abandoned sign-in fired it later,
+stale suggestions stayed, and a failed lookup showed no message.
+
 A sixth regression, a minor seeing an adults-only signal listed on its author's
 profile, failed before the one-line fix in `getProfile`. The tests that passed
 throughout assert preserved behaviour: the author's own access, a restricted
@@ -162,7 +171,7 @@ response, no reopening after selection, and switcher persistence across
 reload. The races are made deterministic by holding specific HTTP responses at
 the network layer.
 
-`e2e/activity-search.spec.ts` adds **5 tests** for activity search:
+`e2e/activity-search.spec.ts` adds **9 tests** for activity search:
 - anonymous search → preview → reload → demo onboarding → back on `/search`
   with every input restored and results shown;
 - no results still offers the proposal preview, worded only from what was
@@ -170,11 +179,17 @@ the network layer.
 - the entry point from Signals;
 - a stored draft with an invalid time zone is dropped without a crash;
 - a failed search releases the page, keeps the draft, retries successfully,
-  and clears stale results while a replacement request runs.
+  and clears stale results while a replacement request runs;
+- an ordinary visit or reload restores a draft without sending it, and the
+  onboarding return searches exactly once;
+- an abandoned sign-in never fires the search later;
+- city suggestions are cleared when the text changes, and an outdated
+  response never brings them back;
+- a failed city lookup offers a retry that works.
 
 The journey tests assert that no publish, join or respond request is sent.
 
-Total e2e: **26 tests**. Where they were executed for this branch is recorded in
+Total e2e: **30 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:

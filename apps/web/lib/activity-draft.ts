@@ -31,6 +31,12 @@ export interface ActivityDraft {
 
 export const DRAFT_KEY = 'qui.activity-search.draft.v1';
 export const RETURN_KEY = 'qui.return-to';
+/** Set once onboarding finishes after an explicit "Continue"; consumed by /search. */
+export const RESUME_KEY = 'qui.activity-search.resume.v1';
+/** How long an explicit "Continue with demo access" stays valid. */
+const RETURN_TTL_MS = 30 * 60 * 1000;
+/** How long a finished onboarding may take to land back on /search. */
+const RESUME_TTL_MS = 5 * 60 * 1000;
 export const DURATIONS = [60, 90, 120, 180] as const;
 const LEVELS: readonly Level[] = ['any', 'beginner', 'intermediate', 'advanced'];
 /** The only place a post-onboarding return may lead. Never an arbitrary URL. */
@@ -134,9 +140,39 @@ export function saveDraft(draft: ActivityDraft): void {
   }
 }
 
+/** Reads and removes a timestamped marker; returns it only if well formed and fresh. */
+function takeFresh(key: string, ttlMs: number): Record<string, unknown> | null {
+  try {
+    const store = storage();
+    const raw = store?.getItem(key) ?? null;
+    store?.removeItem(key);
+    if (raw === null) return null;
+    const value: unknown = JSON.parse(raw);
+    if (!isRecord(value) || typeof value['at'] !== 'number') return null;
+    const age = Date.now() - value['at'];
+    return age >= 0 && age <= ttlMs ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The continuation, in steps, so that only an explicit "Continue with demo
+ * access" followed by a *finished* onboarding resumes a search:
+ *
+ * 1. `rememberReturnTo` — the person tapped Continue on /search.
+ * 2. `takeReturnTo` + `markResumeReady` — onboarding finished and sends them back.
+ * 3. `takeResumeReady` — /search consumes it once, before sending the request.
+ *
+ * `clearContinuation` drops both when the person is back on /search without a
+ * session (the sign-in was abandoned), and both markers expire, so a later,
+ * unrelated sign-in never fires an old search. Ordinary visits and reloads
+ * find no marker and restore the draft without sending it. Without storage
+ * nothing is marked, and the search is simply manual.
+ */
 export function rememberReturnTo(path: (typeof RETURN_TARGETS)[number]): void {
   try {
-    storage()?.setItem(RETURN_KEY, path);
+    storage()?.setItem(RETURN_KEY, JSON.stringify({ path, at: Date.now() }));
   } catch {
     // Without storage the person simply lands on Discover after onboarding.
   }
@@ -144,12 +180,30 @@ export function rememberReturnTo(path: (typeof RETURN_TARGETS)[number]): void {
 
 /** Reads and clears the pending return. Only an allow-listed internal path is ever returned. */
 export function takeReturnTo(): string | null {
+  const value = takeFresh(RETURN_KEY, RETURN_TTL_MS);
+  const path = value?.['path'];
+  return typeof path === 'string' && (RETURN_TARGETS as readonly string[]).includes(path) ? path : null;
+}
+
+export function markResumeReady(): void {
+  try {
+    storage()?.setItem(RESUME_KEY, JSON.stringify({ at: Date.now() }));
+  } catch {
+    // Without storage the person searches manually.
+  }
+}
+
+/** True once, right after a finished onboarding; consumed before any request is sent. */
+export function takeResumeReady(): boolean {
+  return takeFresh(RESUME_KEY, RESUME_TTL_MS) !== null;
+}
+
+export function clearContinuation(): void {
   try {
     const store = storage();
-    const value = store?.getItem(RETURN_KEY) ?? null;
     store?.removeItem(RETURN_KEY);
-    return value !== null && (RETURN_TARGETS as readonly string[]).includes(value) ? value : null;
+    store?.removeItem(RESUME_KEY);
   } catch {
-    return null;
+    // Nothing to clear.
   }
 }
