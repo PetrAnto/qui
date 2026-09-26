@@ -207,3 +207,78 @@ export function clearContinuation(): void {
     // Nothing to clear.
   }
 }
+
+// ---------------------------------------------------------------------------
+// Publication (ADR-0016): one key per set of inputs, kept with the draft.
+// ---------------------------------------------------------------------------
+
+export const PUBLICATION_KEY = 'qui.activity-search.publication.v1';
+const PROPOSAL_KEY = /^[a-z0-9][a-z0-9-]{7,63}$/;
+
+/**
+ * What was published — or is being published — from which inputs. The same
+ * inputs reuse the same key, so a retry, a reload or a double click can only
+ * ever reach the one activity the server derives from that key. Changing any
+ * input makes a new proposal with a new key.
+ */
+export interface PublicationRecord {
+  readonly v: 1;
+  readonly key: string;
+  /** `inputsKey(draft)` of the inputs this key publishes. */
+  readonly inputs: string;
+  /** Set once the server confirmed the activity. */
+  readonly signalId: string | null;
+}
+
+/** A stable identity for the inputs a proposal publishes; the key itself is excluded. */
+export function inputsKey(draft: ActivityDraft): string {
+  return JSON.stringify({
+    practice: draft.practice.trim(),
+    city: draft.city?.id ?? null,
+    slots: [...draft.slots]
+      .map((slot) => `${slot.date}:${slot.part}:${slot.preferred ? 1 : 0}`)
+      .sort(),
+    durationMinutes: draft.durationMinutes,
+    level: draft.level,
+    freeOnly: draft.freeOnly,
+  });
+}
+
+export function newProposalKey(): string {
+  const random =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return random.toLowerCase();
+}
+
+export function parsePublication(raw: string | null): PublicationRecord | null {
+  if (raw === null) return null;
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!isRecord(value) || value['v'] !== 1) return null;
+    const { key, inputs, signalId } = value;
+    if (typeof key !== 'string' || !PROPOSAL_KEY.test(key) || typeof inputs !== 'string') return null;
+    if (signalId !== null && (typeof signalId !== 'string' || !signalId.startsWith('sig-p-'))) return null;
+    return { v: 1, key, inputs, signalId };
+  } catch {
+    return null;
+  }
+}
+
+export function loadPublication(): PublicationRecord | null {
+  try {
+    return parsePublication(storage()?.getItem(PUBLICATION_KEY) ?? null);
+  } catch {
+    return null;
+  }
+}
+
+export function savePublication(record: PublicationRecord): void {
+  try {
+    storage()?.setItem(PUBLICATION_KEY, JSON.stringify(record));
+  } catch {
+    // Without storage a retry after a reload gets a fresh key; the server still
+    // refuses nothing twice within one page, because the key is kept in memory.
+  }
+}

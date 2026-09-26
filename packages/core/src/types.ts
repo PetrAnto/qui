@@ -230,9 +230,45 @@ export type SignalType = (typeof SIGNAL_TYPES)[number];
 
 export type SignalState = 'open' | 'closed' | 'expired' | 'removed';
 
+/** A candidate time for a proposal: possible, not an appointment. */
+export interface PlanWindow {
+  readonly start: Instant;
+  readonly end: Instant;
+  readonly preferred: boolean;
+}
+
+export type PlanLevel = 'any' | 'beginner' | 'intermediate' | 'advanced';
+
+/**
+ * What an activity proposal says, as the person said it (ADR-0016). Windows
+ * stay windows and preferences stay preferences; nothing here is a fixed time
+ * or a confirmed fact. Cost and equipment are not recorded, so they stay
+ * unknown.
+ */
+export interface ActivityPlan {
+  readonly practiceLabel: string;
+  /** IANA zone of the city the windows were chosen in. */
+  readonly timezone: string;
+  readonly windows: readonly PlanWindow[];
+  readonly durationMinutes: number;
+  readonly level: { readonly value: PlanLevel; readonly mandatory: boolean } | null;
+  readonly freeOnly: { readonly mandatory: boolean } | null;
+  /** Client-chosen key that makes publication idempotent. Never projected. */
+  readonly proposalKey: string;
+}
+
 export interface Signal {
   readonly id: SignalId;
   readonly creatorId: UserId;
+  /**
+   * The designated host (INV-HOST-2, ADR-0016): the only account holding host
+   * power over this signal. The creator for every signal created as before;
+   * null for an activity proposal, which has no host — and so no host powers,
+   * no joining and no responses (INV-PROPOSAL-1).
+   */
+  readonly hostId: UserId | null;
+  /** Set only on an activity proposal. */
+  readonly plan: ActivityPlan | null;
   readonly type: SignalType;
   readonly title: string;
   readonly body: string;

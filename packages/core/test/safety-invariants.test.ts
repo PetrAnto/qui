@@ -24,6 +24,7 @@ import {
   canSendMessage,
   visibleParticipants,
 } from '../src/policy/interaction';
+import { canProposeActivity, EMPTY_EVIDENCE } from '../src/policy/capabilities';
 import { acceptAttestation } from '../src/identity/intake';
 import { toPublicPost, toPublicProfile, toPublicSignal } from '../src/projections';
 import { rankDiscover } from '../src/ranking';
@@ -275,6 +276,58 @@ describe('INV-HOST-2 host power is local to the hosted object', () => {
       allowed: false,
       reason: 'moderation_private',
     });
+  });
+});
+
+describe('INV-HOST-2 host power follows the designated host (ADR-0016)', () => {
+  it('gives the author of a hostless proposal no host power at all', () => {
+    const proposer = actor('proposer');
+    const proposal = signal('s-p', proposer.id, 'join', { hostId: null });
+    for (const power of ['accept_response', 'remove_participant', 'exclude_participant', 'close_participation'] as const) {
+      expect(canExerciseHostPower(proposer, proposal, power)).toEqual({ allowed: false, reason: 'not_host' });
+    }
+  });
+});
+
+describe('INV-PROPOSAL-1 a hostless proposal cannot be joined, answered or used for power', () => {
+  const graph = createSafetyGraph([]);
+  const proposer = actor('proposer');
+  const proposal = signal('s-p', proposer.id, 'join', { hostId: null });
+
+  it('refuses every join and response, for adults and minors alike', () => {
+    for (const viewer of [actor('adult'), actor('minor', { ageBand: 'minor_15_17' })]) {
+      expect(canRespondToSignal(viewer, proposal, proposer, graph, NOW).reason).toBe('awaiting_host');
+      expect(canJoinEvent(viewer, proposal, proposer, graph, 0, NOW).reason).toBe('awaiting_host');
+    }
+  });
+
+  it('does not make the proposer its host for outcome reports', () => {
+    expect(
+      canReportOutcome(proposer, proposal, { joined: false, acceptedResponse: false, excluded: false }).reason,
+    ).toBe('not_participant');
+  });
+
+  it('lets only an active adult with publish and an existing tie of any kind propose', () => {
+    const exploring = {
+      ...EMPTY_EVIDENCE,
+      attachments: [{ userId: 'a', geoScopeId: 'geo:city:x', kind: 'exploring' as const, evidence: 'declared' as const, since: T0 }],
+    };
+    const adult = actor('a');
+    expect(canProposeActivity(adult, 'geo:city:x', exploring).allowed).toBe(true);
+    // Proposing never needs the host capability…
+    expect(adult.capabilities.has('host')).toBe(false);
+    // …but it does need everything else.
+    expect(canProposeActivity(adult, 'geo:city:y', exploring).reason).toBe('no_city_attachment');
+    expect(canProposeActivity(adult, 'geo:city:x', EMPTY_EVIDENCE).reason).toBe('no_city_attachment');
+    expect(canProposeActivity(actor('m', { ageBand: 'minor_15_17' }), 'geo:city:x', exploring).reason).toBe(
+      'proposal_adults_only',
+    );
+    expect(canProposeActivity(actor('s', { accountState: 'suspended' }), 'geo:city:x', exploring).reason).toBe(
+      'account_suspended',
+    );
+    expect(canProposeActivity(actor('n', { capabilities: [] }), 'geo:city:x', exploring).reason).toBe(
+      'missing_capability',
+    );
   });
 });
 

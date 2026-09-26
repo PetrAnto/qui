@@ -5,7 +5,7 @@ trade against features. Weakening one requires a superseding ADR and a recorded
 product-owner decision — not a pull request.
 
 Each `INV-` identifier below corresponds to a `describe()` block in
-`packages/core/test/safety-invariants.test.ts` (45 tests). CI runs them twice:
+`packages/core/test/safety-invariants.test.ts` (49 tests). CI runs them twice:
 once inside the full suite, and once as a separate named gate
 (`pnpm test:safety`), so that a failure is legible as *a safety failure* rather
 than as one red line among many.

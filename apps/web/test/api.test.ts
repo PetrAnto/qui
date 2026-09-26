@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DEMO_USERS } from '@indenoi/db/demo';
 import { CITY_IDS } from '@indenoi/geo';
 
+import { POST as publishProposalRoute } from '../app/api/activities/proposals/route';
 import { POST as searchActivitiesRoute } from '../app/api/activities/search/route';
 import { POST as appreciate } from '../app/api/appreciations/route';
 import { POST as block } from '../app/api/blocks/route';
@@ -331,5 +332,48 @@ describe('activity search', () => {
     const response = await searchCities(request('/api/cities?q=lyon'));
     const { cities } = (await response.json()) as { cities: Record<string, unknown>[] };
     expect(cities[0]).toMatchObject({ id: CITY_IDS.lyon, timezone: 'Europe/Paris' });
+  });
+});
+
+describe('publishing a proposal', () => {
+  const proposal = {
+    practice: 'paddle',
+    geoScopeId: CITY_IDS.ajaccio,
+    slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+    durationMinutes: 90,
+    proposalKey: 'api-key-0001',
+  };
+
+  function post(as: string, body: unknown): Promise<Response> {
+    return publishProposalRoute(
+      request('/api/activities/proposals', { method: 'POST', as, body: JSON.stringify(body) }),
+    );
+  }
+
+  it('creates once (201), then answers a retry with the same activity (200)', async () => {
+    const first = await post(DEMO_USERS.lea, proposal);
+    expect(first.status).toBe(201);
+    expect(first.headers.get('cache-control')).toBe('private, no-store');
+    const created = (await first.json()) as { signalId: string; created: boolean };
+    expect(created.created).toBe(true);
+
+    const retry = await post(DEMO_USERS.lea, proposal);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toEqual({ signalId: created.signalId, created: false });
+  });
+
+  it('refuses without a tie to the city, writing nothing', async () => {
+    const repo = getStore().ports.repo;
+    const before = JSON.stringify([await repo.listSignals(), await repo.listAttachments(DEMO_USERS.tom)]);
+    const refused = await post(DEMO_USERS.tom, proposal);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ reason: 'no_city_attachment' });
+    expect(JSON.stringify([await repo.listSignals(), await repo.listAttachments(DEMO_USERS.tom)])).toBe(before);
+  });
+
+  it('refuses a minor, and malformed input', async () => {
+    expect((await post(DEMO_USERS.ines, proposal)).status).toBe(403);
+    expect((await post(DEMO_USERS.lea, { ...proposal, proposalKey: undefined })).status).toBe(400);
+    expect((await post(DEMO_USERS.lea, { ...proposal, slots: [] })).status).toBe(400);
   });
 });

@@ -1,5 +1,6 @@
 import type { EvidenceBundle } from './policy/capabilities';
 import type {
+  ActivityPlan,
   GeoScope,
   MediaAsset,
   Person,
@@ -82,9 +83,15 @@ export interface PublicSignal {
   readonly cityName: string;
   readonly linkedPostId: string | null;
   readonly creator: PublicAuthor;
+  /** True for an activity proposal: nobody hosts it yet (ADR-0016). */
+  readonly hostless: boolean;
+  /** What a proposal says; everything but its private idempotency key. */
+  readonly plan: PublicPlan | null;
   readonly createdAt: string;
   readonly demo: true;
 }
+
+export type PublicPlan = Omit<ActivityPlan, 'proposalKey'>;
 
 function trustSignalsFrom(evidence: EvidenceBundle): TrustSignals {
   const verified = (kind: string): boolean =>
@@ -178,6 +185,18 @@ export function toPublicSignal(
     cityName,
     linkedPostId: signal.linkedPostId,
     creator: toPublicAuthor(creator),
+    hostless: signal.hostId === null,
+    plan:
+      signal.plan === null
+        ? null
+        : {
+            practiceLabel: signal.plan.practiceLabel,
+            timezone: signal.plan.timezone,
+            windows: signal.plan.windows,
+            durationMinutes: signal.plan.durationMinutes,
+            level: signal.plan.level,
+            freeOnly: signal.plan.freeOnly,
+          },
     createdAt: signal.createdAt,
     demo: true,
   };

@@ -259,6 +259,7 @@ still requires `host`. Proposals go through `publishProposal`.
 | Proposal preview built from the search inputs | `activity/preview.ts` | pure, tested |
 | Read-only activity search | `services/search.ts`, `POST /api/activities/search` | wired, tested |
 | Search → results → preview screen | `app/search`, `components/ActivitySearch.tsx` | wired, e2e |
+| Publishing the preview as a hostless proposal (ADR-0016) | `services/proposals.ts`, `POST /api/activities/proposals` | wired, e2e |
 
 **Search, results and preview (synthetic demo).**
 
@@ -293,12 +294,42 @@ still requires `host`. Proposals go through `publishProposal`.
   - equipment is "not specified", never "none needed";
   - an empty result reads "no matching activity found for these criteria".
 
-  The screen says publication is not available in the demo; the underlying
-  policy (P5) is still open.
+  A signed-in adult with any tie to the city can publish it with one explicit
+  action; see **Publishing a proposal** below.
 - **Anonymous results are not offered.** An identity-free anonymous projection
   remains an open decision.
 
-The modules change no permission.
+**Publishing a proposal (ADR-0016, P1 and P5 approved for the adult-only demo).**
+
+- **One explicit Publish on the preview.** It publishes exactly the inputs the
+  visible preview was built from, as one `join` Signal with `hostId: null`.
+  There is no separate request object.
+- **Structured `plan`.** It holds:
+  - the practice, the time zone and the duration;
+  - each candidate window with its preferred flag;
+  - the level and free-only criteria, each still required or preferred.
+
+  Because `startsAt` stays null, no window becomes an appointment. Cost and
+  equipment are not recorded, so they stay unknown.
+- **Eligibility is checked server-side before any write** (`canProposeActivity`).
+  The proposer needs an active adult account, `publish`, and an existing
+  attachment of any kind to the city. The service never creates one, and a
+  refusal writes nothing.
+- **Idempotent.** The signal id is derived from the proposer and a key the
+  browser keeps with the draft for those exact inputs. Retries, reloads and
+  double clicks reach the same activity; the same key with different inputs is
+  a conflict.
+- **Discovery.** The proposal is listed and matched through `canViewSignal` and
+  the existing matcher. Its windows are matched as proposed windows, and only a
+  *required* level counts as a stated level.
+- **INV-PROPOSAL-1.** Nobody can join or answer the proposal (`awaiting_host`),
+  it opens no thread, and its proposer holds no host power and no
+  participation.
+- **Storage.** The in-memory demo store keeps proposals. The D1 adapter
+  refuses them and reads every stored row as hosted by its creator.
+
+The pure modules change no permission; the publication rules above are the
+approved amendments.
 
 Runtime participation fixes. These restrict; they do not widen:
 

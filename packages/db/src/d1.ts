@@ -266,10 +266,18 @@ function postRow(post: Post): typeof s.posts.$inferInsert {
   };
 }
 
+/**
+ * Every row this adapter stores was created as before ADR-0016, so its host is
+ * its creator. Activity proposals (hostless, with a plan) are not persisted by
+ * D1 yet: `putSignal` refuses them rather than silently dropping the plan or
+ * turning a proposal into a hosted Join.
+ */
 function signalFromRow(row: typeof s.signals.$inferSelect): Signal {
   return {
     id: row.id,
     creatorId: row.creatorId,
+    hostId: row.creatorId,
+    plan: null,
     type: row.type as Signal['type'],
     title: row.title,
     body: row.body,
@@ -576,6 +584,9 @@ export function createD1Repository(database: D1Database): Repository {
       return rows[0] === undefined ? null : signalFromRow(rows[0]);
     },
     putSignal: async (signal) => {
+      if (signal.plan !== null || signal.hostId !== signal.creatorId) {
+        throw new Error('D1 does not persist activity proposals yet (ADR-0016)');
+      }
       await ensureScope(signal.geoScopeId);
       const row = signalRow(signal);
       await db.insert(s.signals).values(row).onConflictDoUpdate({ target: s.signals.id, set: row });

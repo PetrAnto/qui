@@ -253,6 +253,22 @@ describe('store parity: geography', () => {
   });
 });
 
+describe('activity proposals (ADR-0016)', () => {
+  it('reads every stored signal as hosted by its creator', async () => {
+    for (const signal of await d1.listSignals()) {
+      expect(signal.hostId).toBe(signal.creatorId);
+      expect(signal.plan).toBeNull();
+    }
+  });
+
+  it('refuses to persist a hostless proposal rather than silently turning it into a hosted join', async () => {
+    const [existing] = await d1.listSignals();
+    if (existing === undefined) throw new Error('no seeded signal');
+    await expect(d1.putSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
+    expect(await d1.getSignal('sig-p-refused')).toBeNull();
+  });
+});
+
 describe('store parity: content and the product loop', () => {
   it('lists and filters posts identically', async () => {
     expect(await d1.listPosts()).toEqual(await mem.listPosts());
