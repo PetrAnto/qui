@@ -5,6 +5,11 @@ import {
   EMPTY_DRAFT,
   RETURN_KEY,
   clearContinuation,
+  inputsKey,
+  loadPublication,
+  newProposalKey,
+  parsePublication,
+  savePublication,
   loadDraft,
   markResumeReady,
   parseDraft,
@@ -161,5 +166,32 @@ describe('resuming a search after the demo identity flow', () => {
     delete scope.window;
     expect(() => markResumeReady()).not.toThrow();
     expect(takeResumeReady()).toBe(false);
+  });
+});
+
+describe('the publication record', () => {
+  it('reuses one key for the same inputs and changes it for different ones', () => {
+    const key = newProposalKey();
+    expect(key).toMatch(/^[a-z0-9][a-z0-9-]{7,63}$/);
+    expect(inputsKey(DRAFT)).toBe(inputsKey({ ...DRAFT, slots: [...DRAFT.slots].reverse() }));
+    expect(inputsKey(DRAFT)).not.toBe(inputsKey({ ...DRAFT, durationMinutes: 60 }));
+    expect(inputsKey(DRAFT)).not.toBe(inputsKey({ ...DRAFT, freeOnly: null }));
+  });
+
+  it('round-trips, and rejects anything tampered', () => {
+    const record = { v: 1 as const, key: newProposalKey(), inputs: inputsKey(DRAFT), signalId: null };
+    savePublication(record);
+    expect(loadPublication()).toEqual(record);
+    const done = { ...record, signalId: 'sig-p-usr-lea-abc12345' };
+    savePublication(done);
+    expect(loadPublication()).toEqual(done);
+    for (const raw of [
+      'nope',
+      JSON.stringify({ ...record, key: 'BAD KEY' }),
+      JSON.stringify({ ...record, signalId: 'sig-other' }),
+      JSON.stringify({ ...record, v: 2 }),
+    ]) {
+      expect(parsePublication(raw)).toBeNull();
+    }
   });
 });

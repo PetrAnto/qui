@@ -28,6 +28,7 @@ export function SignalRow({
       <div className="row row--wrap">
         <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
+        {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
         <span className="faint spacer">{relativeTime(signal.createdAt, now)}</span>
       </div>
 

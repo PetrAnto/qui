@@ -32,6 +32,33 @@ export function describeSignal(
 ): ActivityDescriptor | null {
   if (signal.type !== 'join' && signal.type !== 'event') return null;
   if (signal.state === 'removed') return null;
+  const plan = signal.plan;
+  if (plan !== null) {
+    // An activity proposal (ADR-0016): its windows stay candidate windows,
+    // only a *required* level is a stated fact about it, and cost stays
+    // unknown. The proposer is not a participant and holds no place.
+    return {
+      signalId: signal.id,
+      geoScopeId: signal.geoScopeId,
+      timezone: plan.timezone,
+      live: isSignalLive(signal, context.now),
+      practiceKey: practiceKeyOf(signal.practice),
+      timing: {
+        kind: 'proposed',
+        windows: plan.windows.map((window) => ({ start: window.start, end: window.end })),
+        durationMinutes: plan.durationMinutes,
+      },
+      capacity: { places: signal.capacity, counts: 'includes_organizer' },
+      participation: {
+        organizerId: signal.creatorId,
+        organizerParticipates: false,
+        participantIds: context.joinedIds,
+      },
+      cost: { kind: 'unknown' },
+      level: plan.level !== null && plan.level.mandatory ? plan.level.value : null,
+      equipment: null,
+    };
+  }
   return {
     signalId: signal.id,
     geoScopeId: signal.geoScopeId,
