@@ -1,5 +1,7 @@
 import { buildClusterReport, type ClusterReport } from '../analytics/clusters';
-import { canDiscoverUser, canViewPost, canViewProfile } from '../policy/access';
+import { canDiscoverUser, canViewPost, canViewProfile,
+  canViewSignal,
+} from '../policy/access';
 import { canPublishInGeo, toActorView } from '../policy/capabilities';
 import type { ActorView, Decision } from '../policy/decision';
 import type { SafetyGraph } from '../policy/graph';
@@ -337,20 +339,14 @@ export async function listSignals(
 
   const cards: SignalCard[] = [];
   for (const signal of signals) {
-    if (signal.state === 'removed') continue;
     if (input.geoScopeId !== null && signal.geoScopeId !== input.geoScopeId) continue;
     if (input.type != null && signal.type !== input.type) continue;
     const creator = context.people.get(signal.creatorId);
     const creatorView = context.actors.get(signal.creatorId);
     if (creator === undefined || creatorView === undefined) continue;
-    // A blocked pair never sees each other's signals at all.
-    if (
-      signal.creatorId !== input.viewerId &&
-      context.graph.isBlockedBetween(input.viewerId, signal.creatorId)
-    ) {
-      continue;
-    }
-    if (signal.audience === 'adults_only' && context.viewer.ageBand === 'minor_15_17') continue;
+    // Removed content, blocked pairs, suspended or restricted authors and
+    // adult-only audiences are all decided by one policy, before projection.
+    if (!canViewSignal(context.viewer, signal, creatorView, context.graph).allowed) continue;
 
     cards.push({
       signal: toPublicSignal(

@@ -84,13 +84,19 @@ test('with nothing open, still offers the proposal the search would become', asy
   await slot.click();
   await expect(page.getByRole('button', { name: 'Wed 19 Aug evening: preferred' })).toBeVisible();
   await page.getByLabel('Level').selectOption('intermediate:must');
+  await page.getByLabel('Cost').selectOption('prefer');
 
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await expect(page.getByText('Nobody has proposed padel in Montpellier for those times yet.')).toBeVisible();
+  // An empty filtered result is not proof that nobody proposed it.
+  await expect(page.getByText('No matching activity found for these criteria in Montpellier.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'padel in Montpellier' })).toBeVisible();
   await expect(page.getByText('Wed 18:00–22:00 ★ preferred')).toBeVisible();
   await expect(page.getByText('Level: intermediate — required')).toBeVisible();
-  await expect(page.getByText('Nothing has been published or joined.')).toBeVisible();
+  // A preference for free is not a confirmed free cost; no equipment data is not "no equipment".
+  await expect(page.getByText('Cost: free preferred, not confirmed.')).toBeVisible();
+  await expect(page.getByText('Equipment: not specified.')).toBeVisible();
+  await expect(page.getByText('Publishing is not available in this demo.')).toBeVisible();
+  await expect(page.getByText(/owner decision/i)).toHaveCount(0);
 
   expect(writes).toEqual([]);
 });
@@ -100,4 +106,66 @@ test('is reachable from Signals', async ({ page }) => {
   await page.goto('/signals');
   await page.getByRole('link', { name: 'Find something to do' }).click();
   await expect(page).toHaveURL(/\/search$/);
+});
+
+test('recovers from a stored draft whose time zone is not real', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      'qui.activity-search.draft.v1',
+      JSON.stringify({
+        v: 1,
+        practice: 'climbing',
+        city: { id: 'geo:city:lyon', name: 'Lyon', timezone: 'Invalid/Zone' },
+        slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+        durationMinutes: 90,
+        level: null,
+        freeOnly: null,
+      }),
+    );
+  });
+  await page.goto('/search');
+  await expect(page.getByRole('heading', { name: 'Find something to do' })).toBeVisible();
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('');
+  expect(errors).toEqual([]);
+});
+
+test('recovers from a failed search, keeps the draft, and a retry works', async ({ page }) => {
+  await onboard(page, '31');
+  await page.goto('/search');
+  await page.getByLabel('What do you want to do?').fill('climbing');
+  await chooseCity(page, 'Lyon');
+  await page.getByRole('button', { name: 'Tue 18 Aug afternoon: not free' }).click();
+
+  let mode: 'fail' | 'hold' | 'pass' = 'fail';
+  let release: () => void = () => undefined;
+  await page.route('**/api/activities/search', async (route) => {
+    if (mode === 'fail') {
+      await route.abort('failed');
+      return;
+    }
+    if (mode === 'hold') await new Promise<void>((resolve) => (release = resolve));
+    await route.continue();
+  });
+
+  const search = page.getByRole('button', { name: 'Search', exact: true });
+  await search.click();
+  await expect(page.getByText('The search could not be completed. Check your connection and try again — your search is kept.')).toBeVisible();
+  await expect(search).toBeEnabled();
+  await expect(page.getByLabel('What do you want to do?')).toHaveValue('climbing');
+
+  mode = 'pass';
+  await search.click();
+  await expect(page.getByText('Needs confirmation')).toBeVisible();
+
+  // A replacement request clears the results of the previous query while it runs.
+  mode = 'hold';
+  await page.getByLabel('What do you want to do?').fill('bouldering');
+  await search.click();
+  await expect(page.getByText('Needs confirmation')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'climbing in Lyon' })).toHaveCount(0);
+  release();
+  await expect(page.getByRole('heading', { name: 'bouldering in Lyon' })).toBeVisible();
+  await expect(page.getByText('No matching activity found for these criteria in Lyon.')).toBeVisible();
 });

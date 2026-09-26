@@ -79,10 +79,10 @@ describe('the proposal preview', () => {
       ],
       durationMinutes: 90,
       criteria: [],
-      equipment: 'none',
-      cost: 'not_stated',
+      equipment: 'not_specified',
+      cost: 'not_specified',
       publishable: false,
-      notPublishableBecause: 'owner_decision_pending',
+      notPublishableBecause: 'not_available_in_demo',
     });
   });
 
@@ -100,7 +100,23 @@ describe('the proposal preview', () => {
       { label: 'Level: intermediate', mandatory: true },
       { label: 'Free to take part', mandatory: false },
     ]);
-    expect(preview.cost).toBe('free');
+    // A preference for free is not a confirmed free cost.
+    expect(preview.cost).toBe('free_preferred');
     expect(preview.publishable).toBe(false);
+  });
+});
+
+describe('the preview states only what was supplied', () => {
+  const availability = slotsToAvailability([{ date: '2026-08-18', part: 'morning', preferred: false }], 'Europe/Paris');
+  const base = { practice: 'Walk', cityName: 'Marseille', timezone: 'Europe/Paris', availability, durationMinutes: 90 };
+
+  it('distinguishes a required free cost, a preferred one, and none stated', () => {
+    expect(buildProposalPreview({ ...base, freeOnly: { value: true, mandatory: true } }).cost).toBe('free_required');
+    expect(buildProposalPreview({ ...base, freeOnly: { value: true, mandatory: false } }).cost).toBe('free_preferred');
+    expect(buildProposalPreview(base).cost).toBe('not_specified');
+  });
+
+  it('never claims that no equipment is required', () => {
+    expect(buildProposalPreview(base).equipment).toBe('not_specified');
   });
 });

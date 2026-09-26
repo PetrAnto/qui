@@ -56,6 +56,15 @@ const OUTCOME_MARKS: Readonly<Record<MatchReason['outcome'], string>> = {
   info: '·',
 };
 
+const SEARCH_FAILED =
+  'The search could not be completed. Check your connection and try again — your search is kept.';
+
+const COST_LINES: Readonly<Record<ProposalPreview['cost'], string>> = {
+  free_required: 'Cost: free (required).',
+  free_preferred: 'Cost: free preferred, not confirmed.',
+  not_specified: 'Cost: not specified.',
+};
+
 const OUTCOME_WORDS: Readonly<Record<MatchReason['outcome'], string>> = {
   met: 'met',
   unmet: 'not met',
@@ -129,30 +138,46 @@ export function ActivitySearch({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const citySeq = useRef(createSearchSequence());
+  const searchSeq = useRef(createSearchSequence());
   const autoRan = useRef(false);
 
+  /**
+   * Results and preview always describe the same submitted query: both are
+   * cleared the moment a new search starts, and a slower answer to an older
+   * query is ignored. A failed request never leaves the page stuck — busy is
+   * released in `finally`, and the draft is untouched so the person can retry.
+   */
   async function runSearch(current: ActivityDraft): Promise<void> {
     const nextPreview = previewFor(current);
-    setPreview(nextPreview);
+    const token = searchSeq.current.begin();
+    setView(null);
     setError(null);
     if (!signedIn || current.city === null || nextPreview === null) {
-      setView(null);
+      setPreview(nextPreview);
       return;
     }
+    setPreview(null);
     setBusy(true);
-    const result = await api.post<ActivitySearchView>('/api/activities/search', {
-      practice: current.practice,
-      geoScopeId: current.city.id,
-      slots: current.slots,
-      durationMinutes: current.durationMinutes,
-      ...(current.level !== null ? { level: current.level } : {}),
-      ...(current.freeOnly !== null ? { freeOnly: current.freeOnly } : {}),
-    });
-    setBusy(false);
-    if (result.ok) setView(result.value);
-    else {
-      setView(null);
-      setError(result.message);
+    try {
+      const result = await api.post<ActivitySearchView>('/api/activities/search', {
+        practice: current.practice,
+        geoScopeId: current.city.id,
+        slots: current.slots,
+        durationMinutes: current.durationMinutes,
+        ...(current.level !== null ? { level: current.level } : {}),
+        ...(current.freeOnly !== null ? { freeOnly: current.freeOnly } : {}),
+      });
+      if (!searchSeq.current.isCurrent(token)) return;
+      if (result.ok) {
+        setView(result.value);
+        setPreview(nextPreview);
+      } else {
+        setError(result.message);
+      }
+    } catch {
+      if (searchSeq.current.isCurrent(token)) setError(SEARCH_FAILED);
+    } finally {
+      if (searchSeq.current.isCurrent(token)) setBusy(false);
     }
   }
 
@@ -381,8 +406,8 @@ export function ActivitySearch({
           <h2 id="results-title">Open activities</h2>
           {view.results.length === 0 ? (
             <p className="empty">
-              Nobody has proposed {preview.practiceKey.replace(/-/g, ' ')} in {preview.cityName} for those
-              times yet. Your proposal is below.
+              No matching activity found for these criteria in {preview.cityName}. Your proposal is
+              below.
             </p>
           ) : (
             view.results.map((result) => (
@@ -445,11 +470,10 @@ export function ActivitySearch({
             </ul>
           ) : null}
           <p className="faint">
-            No equipment needed unless you add some. Cost: {preview.cost === 'free' ? 'free' : 'not stated'}.
+            Equipment: not specified. {COST_LINES[preview.cost]}
           </p>
           <p className="notice">
-            Nothing has been published or joined. Publishing a proposal from here comes in a later
-            step: proposing without hosting still awaits an owner decision.
+            Publishing is not available in this demo. Nothing has been published or joined.
           </p>
         </section>
       ) : null}

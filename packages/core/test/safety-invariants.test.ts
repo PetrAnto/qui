@@ -11,6 +11,7 @@ import {
   canViewPost,
   canViewProfile,
   canViewReport,
+  canViewSignal,
 } from '../src/policy/access';
 import {
   canContact,
@@ -513,6 +514,25 @@ describe('INV-SUSPEND-1 suspended and restricted accounts respect policy', () =>
     const restricted = post('p1', 'author', { state: 'distribution_restricted' });
     expect(canViewPost(viewer, restricted, author, graph).reason).toBe('distribution_restricted');
     expect(canViewPost(author, restricted, author, graph).allowed).toBe(true);
+  });
+
+  it('removes a suspended or restricted author’s signals for others, never for the author', () => {
+    const viewer = actor('viewer');
+    const minor = actor('minor', { ageBand: 'minor_15_17' });
+    for (const accountState of ['suspended', 'distribution_restricted'] as const) {
+      const author = actor('author', { accountState });
+      const own = signal('s-own', 'author', 'join');
+      expect(canViewSignal(viewer, own, author, graph).allowed).toBe(false);
+      expect(canViewSignal(author, own, author, graph).allowed).toBe(true);
+    }
+    const active = actor('author');
+    expect(canViewSignal(viewer, signal('s-a', 'author', 'join'), active, graph).allowed).toBe(true);
+    // Blocks and age audiences still apply.
+    const blocked = createSafetyGraph([{ id: 'b1', blockerId: 'viewer', blockedId: 'author', createdAt: T0 }]);
+    expect(canViewSignal(viewer, signal('s-b', 'author', 'join'), active, blocked).reason).toBe('blocked');
+    expect(
+      canViewSignal(minor, signal('s-c', 'author', 'join', { audience: 'adults_only' }), active, graph).reason,
+    ).toBe('adults_only_content');
   });
 
   it('stops a suspended account from responding to anything', () => {

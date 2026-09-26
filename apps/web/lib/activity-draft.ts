@@ -1,4 +1,4 @@
-import { DAY_PARTS, isLocalDate, type DayPart, type DaySlot, type Level } from '@indenoi/core';
+import { DAY_PARTS, isLocalDate, isValidTimeZone, type DayPart, type DaySlot, type Level } from '@indenoi/core';
 
 /**
  * The activity-search draft, kept in the browser only.
@@ -75,6 +75,9 @@ export function parseDraft(raw: string | null): ActivityDraft | null {
     if (!isRecord(city)) return null;
     const { id, name, timezone } = city;
     if (typeof id !== 'string' || typeof name !== 'string' || typeof timezone !== 'string') return null;
+    // Every time helper on the page goes through Intl with this zone; an
+    // unknown zone would throw during render, so the draft is refused instead.
+    if (id.length === 0 || name.length === 0 || !isValidTimeZone(timezone)) return null;
     parsedCity = { id, name, timezone };
   }
   if (!Array.isArray(slots) || slots.length > 21) return null;

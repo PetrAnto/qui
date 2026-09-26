@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  DRAFT_KEY,
   EMPTY_DRAFT,
   RETURN_KEY,
   loadDraft,
@@ -70,6 +71,8 @@ describe('the activity-search draft', () => {
       JSON.stringify({ ...DRAFT, durationMinutes: 45 }),
       JSON.stringify({ ...DRAFT, level: { value: 'expert', mandatory: true } }),
       JSON.stringify({ ...DRAFT, city: { id: 'geo:city:lyon', name: 'Lyon' } }),
+      JSON.stringify({ ...DRAFT, city: { id: 'geo:city:lyon', name: 'Lyon', timezone: 'Invalid/Zone' } }),
+      JSON.stringify({ ...DRAFT, city: { id: 'geo:city:lyon', name: 'Lyon', timezone: '' } }),
     ]) {
       expect(parseDraft(raw)).toBeNull();
     }
@@ -80,6 +83,22 @@ describe('the activity-search draft', () => {
     // Nothing about the draft is encoded in the only navigation target it uses.
     rememberReturnTo('/search');
     expect(scope.window?.sessionStorage.getItem(RETURN_KEY)).toBe('/search');
+  });
+});
+
+describe('a stored draft with a valid zone', () => {
+  it('survives unchanged, in any valid zone', () => {
+    const tokyo: ActivityDraft = { ...DRAFT, city: { id: 'geo:city:gn-1850147', name: 'Tokyo', timezone: 'Asia/Tokyo' } };
+    saveDraft(tokyo);
+    expect(loadDraft()).toEqual(tokyo);
+  });
+
+  it('is dropped, not crashed on, when its zone is not a real one', () => {
+    scope.window?.sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ ...DRAFT, city: { ...DRAFT.city, timezone: 'Invalid/Zone' } }),
+    );
+    expect(loadDraft()).toBeNull();
   });
 });
 

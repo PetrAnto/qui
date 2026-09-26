@@ -1,4 +1,4 @@
-import type { Post, Report, ModerationCase } from '../types';
+import type { Post, Report, ModerationCase, Signal } from '../types';
 import { canSeeAudience, isAdult, isMinor } from './age';
 import { ALLOW, all, deny, requireActive, type ActorView, type Decision } from './decision';
 import type { SafetyGraph } from './graph';
@@ -40,6 +40,35 @@ export function canViewPost(
   if (author.accountState === 'suspended') return deny('author_suspended');
   if (post.state === 'distribution_restricted') return deny('distribution_restricted');
   return canSeeAudience(viewer, post.audience);
+}
+
+/**
+ * Whether a viewer may see a signal at all — in the Signals list, in activity
+ * search, or anywhere a signal is listed for discovery. Applied before any
+ * projection, ranking or matching, so hidden signals are removed, not demoted
+ * or counted.
+ *
+ *  - INV-BLOCK-1: a blocked pair never sees each other's signals.
+ *  - INV-SUSPEND-1: a suspended author's content disappears for everyone
+ *    else; a distribution-restricted author keeps their voice but loses
+ *    amplification, so their signals are not distributed to others.
+ *  - INV-AGE-4: adult-audience signals never reach a minor.
+ *
+ * The author always sees their own signal: a suspended or restricted account
+ * keeps read access to its own state (INV-SUSPEND-1).
+ */
+export function canViewSignal(
+  viewer: ActorView,
+  signal: Signal,
+  author: ActorView,
+  graph: SafetyGraph,
+): Decision {
+  if (signal.state === 'removed') return deny('content_removed');
+  if (viewer.id === author.id) return ALLOW;
+  if (graph.isBlockedBetween(viewer.id, author.id)) return deny('blocked');
+  if (author.accountState === 'suspended') return deny('author_suspended');
+  if (author.accountState === 'distribution_restricted') return deny('distribution_restricted');
+  return canSeeAudience(viewer, signal.audience);
 }
 
 /** Media never has a looser rule than the post carrying it. */
