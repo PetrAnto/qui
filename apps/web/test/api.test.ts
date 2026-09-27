@@ -371,6 +371,15 @@ describe('publishing a proposal', () => {
     expect(JSON.stringify([await repo.listSignals(), await repo.listAttachments(DEMO_USERS.tom)])).toBe(before);
   });
 
+  it('recreates the same activity under the same key after a demo-store reset', async () => {
+    const first = await post(DEMO_USERS.lea, { ...proposal, proposalKey: 'api-key-reset1' });
+    const { signalId } = (await first.json()) as { signalId: string };
+    resetStore(); // the isolate restarted; the browser still holds the key
+    const again = await post(DEMO_USERS.lea, { ...proposal, proposalKey: 'api-key-reset1' });
+    expect(again.status).toBe(201);
+    expect(await again.json()).toEqual({ signalId, created: true });
+  });
+
   it('refuses a minor, and malformed input', async () => {
     expect((await post(DEMO_USERS.ines, proposal)).status).toBe(403);
     expect((await post(DEMO_USERS.lea, { ...proposal, proposalKey: undefined })).status).toBe(400);

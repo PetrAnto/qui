@@ -63,6 +63,9 @@ const OUTCOME_MARKS: Readonly<Record<MatchReason['outcome'], string>> = {
   info: '·',
 };
 
+/** What is known about a publication record's activity right now. */
+type Verification = 'verifying' | 'published' | 'missing' | 'unverified' | 'unavailable';
+
 const PUBLISH_FAILED =
   'Publishing did not complete. Check your connection and try again — nothing is published twice.';
 
@@ -165,9 +168,12 @@ export function ActivitySearch({
   const [preview, setPreview] = useState<ProposalPreview | null>(null);
   /** The exact inputs the visible preview (and results) were built from. */
   const [submitted, setSubmitted] = useState<ActivityDraft | null>(null);
-  const [publication, setPublication] = useState<PublicationRecord | null>(null);
-  const [publishing, setPublishing] = useState(false);
-  const [publishError, setPublishError] = useState<string | null>(null);
+  /** This actor's publication records, keyed by `inputsKey` — never another actor's. */
+  const [publications, setPublications] = useState<Readonly<Record<string, PublicationRecord>>>({});
+  /** Whether a record's activity was confirmed to still exist, per inputs. */
+  const [verification, setVerification] = useState<Readonly<Record<string, Verification>>>({});
+  const [publishingFor, setPublishingFor] = useState<string | null>(null);
+  const [publishErrors, setPublishErrors] = useState<Readonly<Record<string, string>>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const citySeq = useRef(createSearchSequence());
@@ -178,9 +184,10 @@ export function ActivitySearch({
   // publication state from this page and load only the new actor's.
   useEffect(() => {
     currentActor.current = actorId;
-    setPublication(actorId === null ? null : loadPublication(actorId));
-    setPublishError(null);
-    setPublishing(false);
+    setPublications({});
+    setVerification({});
+    setPublishErrors({});
+    setPublishingFor(null);
   }, [actorId]);
 
   /**
@@ -194,7 +201,8 @@ export function ActivitySearch({
     const token = searchSeq.current.begin();
     setView(null);
     setError(null);
-    setPublishError(null);
+    // A new search clears old messages; the keys themselves stay in the records.
+    setPublishErrors({});
     if (!signedIn || current.city === null || nextPreview === null) {
       setPreview(nextPreview);
       setSubmitted(nextPreview === null ? null : current);
@@ -229,7 +237,6 @@ export function ActivitySearch({
   useEffect(() => {
     const saved = loadDraft();
     if (saved !== null) setDraft({ ...saved, city: saved.city ?? defaultCity });
-    setPublication(actorId === null ? null : loadPublication(actorId));
     if (signedIn) resume.current = takeResumeReady();
     else clearContinuation();
     setRestored(true);
@@ -285,23 +292,70 @@ export function ActivitySearch({
   }
 
   /**
+   * A cached signal id is not proof that the activity still exists: the demo
+   * store lives in the server isolate and resets. Before a restored record is
+   * shown as published it is checked through the ordinary, permission-checked
+   * read (`GET /api/signals/:id`, the same `canReadSignal` as the page). The
+   * check only reads; it never publishes. A late answer for a previous persona
+   * is ignored.
+   */
+  async function verify(record: PublicationRecord, afterRepublish = false): Promise<void> {
+    const signalId = record.signalId;
+    if (signalId === null) return;
+    const { actorId: owner, inputs } = record;
+    setVerification((current) => ({ ...current, [inputs]: 'verifying' }));
+    let next: Verification;
+    try {
+      const result = await api.get(`/api/signals/${encodeURIComponent(signalId)}`);
+      next = result.ok
+        ? 'published'
+        : result.status === 404
+          ? // Still missing after an explicit republish means the server kept
+            // the id (removed or closed) and will not recreate it.
+            afterRepublish
+            ? 'unavailable'
+            : 'missing'
+          : 'unverified';
+    } catch {
+      next = 'unverified';
+    }
+    if (currentActor.current === owner) setVerification((current) => ({ ...current, [inputs]: next }));
+  }
+
+  // When a preview appears, bring back this actor's record for exactly those
+  // inputs and verify it once. Restoring never publishes.
+  useEffect(() => {
+    if (submitted === null || actorId === null || !signedIn) return;
+    const inputs = inputsKey(submitted);
+    const record = publications[inputs] ?? loadPublication(actorId, inputs);
+    if (record === null) return;
+    if (publications[inputs] === undefined) setPublications((current) => ({ ...current, [inputs]: record }));
+    if (record.signalId !== null && verification[inputs] === undefined) void verify(record);
+  }, [submitted, actorId]);
+
+  /**
    * The one explicit Publish action. It publishes exactly the inputs the
    * visible preview was built from, under a key reused for those inputs, so
    * retries and double clicks reach the same activity. The draft is never
    * cleared: a failure leaves everything in place for another try.
    */
   async function publish(): Promise<void> {
-    if (submitted === null || submitted.city === null || publishing || actorId === null) return;
+    if (submitted === null || submitted.city === null || publishingFor !== null || actorId === null) return;
     const owner = actorId;
     const inputs = inputsKey(submitted);
-    const record: PublicationRecord =
-      publication !== null && publication.actorId === owner && publication.inputs === inputs
-        ? publication
-        : { v: 2, actorId: owner, key: newProposalKey(), inputs, signalId: null };
-    setPublication(record);
+    // The key belongs to these inputs for this actor, pending, failed or
+    // published: A → B → A, or a retry after a lost answer, reuses it.
+    const record: PublicationRecord = publications[inputs] ??
+      loadPublication(owner, inputs) ?? { v: 2, actorId: owner, key: newProposalKey(), inputs, signalId: null };
+    const republishing = verification[inputs] === 'missing';
     savePublication(record);
-    setPublishing(true);
-    setPublishError(null);
+    setPublications((current) => ({ ...current, [inputs]: record }));
+    setPublishingFor(inputs);
+    setPublishErrors((current) => {
+      const next = { ...current };
+      delete next[inputs];
+      return next;
+    });
     try {
       const result = await api.post<{ signalId: string; created: boolean }>('/api/activities/proposals', {
         ...inputsBody(submitted, submitted.city),
@@ -313,14 +367,19 @@ export function ActivitySearch({
         savePublication(done);
         // Applied to this page only if it still belongs to the same actor: a
         // late answer for a previous persona never becomes somebody else's.
-        if (currentActor.current === owner) setPublication(done);
+        if (currentActor.current === owner) {
+          setPublications((current) => ({ ...current, [inputs]: done }));
+          // Freshly created: it exists. An existing one is checked, not assumed.
+          if (result.value.created) setVerification((current) => ({ ...current, [inputs]: 'published' }));
+          else void verify(done, republishing);
+        }
       } else if (currentActor.current === owner) {
-        setPublishError(result.message);
+        setPublishErrors((current) => ({ ...current, [inputs]: result.message }));
       }
     } catch {
-      if (currentActor.current === owner) setPublishError(PUBLISH_FAILED);
+      if (currentActor.current === owner) setPublishErrors((current) => ({ ...current, [inputs]: PUBLISH_FAILED }));
     } finally {
-      if (currentActor.current === owner) setPublishing(false);
+      if (currentActor.current === owner) setPublishingFor(null);
     }
   }
 
@@ -331,13 +390,15 @@ export function ActivitySearch({
   }
 
   const dates = draft.city === null ? [] : upcomingLocalDates(now, draft.city.timezone, 7);
-  const published =
-    submitted !== null &&
-    publication !== null &&
-    publication.actorId === actorId &&
-    publication.inputs === inputsKey(submitted)
-      ? publication.signalId
-      : null;
+  const submittedInputs = submitted === null ? null : inputsKey(submitted);
+  const record =
+    submittedInputs === null || actorId === null ? null : (publications[submittedInputs] ?? null);
+  const ownRecord = record !== null && record.actorId === actorId ? record : null;
+  const status = submittedInputs === null ? undefined : verification[submittedInputs];
+  const published = ownRecord?.signalId != null && status === 'published' ? ownRecord.signalId : null;
+  const checking = ownRecord?.signalId != null && (status === undefined || status === 'verifying');
+  const publishing = publishingFor !== null && publishingFor === submittedInputs;
+  const publishError = submittedInputs === null ? null : (publishErrors[submittedInputs] ?? null);
   const ready = previewFor(draft) !== null;
 
   return (
@@ -598,13 +659,38 @@ export function ActivitySearch({
               <Link className="btn btn--block" href={`/signals/${published}`}>
                 View your proposal
               </Link>
+              <button type="button" className="btn btn--small" onClick={() => ownRecord !== null && void verify(ownRecord)}>
+                Check it is still published
+              </button>
             </div>
+          ) : checking ? (
+            <p className="faint" role="status">
+              Checking that your proposal is still published…
+            </p>
+          ) : ownRecord?.signalId != null && status === 'unverified' ? (
+            <div className="notice notice--warn stack stack--tight" role="status">
+              <p>Could not check whether this proposal is still published.</p>
+              <button type="button" className="btn btn--small" onClick={() => void verify(ownRecord)}>
+                Check again
+              </button>
+            </div>
+          ) : ownRecord?.signalId != null && status === 'unavailable' ? (
+            <p className="notice" role="status">
+              This proposal is no longer available and cannot be published again.
+            </p>
           ) : (
             <div className="stack stack--tight">
-              <p className="faint">
-                Publishing shows this proposal to others searching here, with these times as possible
-                windows, not appointments. It gives you no host role.
-              </p>
+              {status === 'missing' ? (
+                <p className="notice" role="status">
+                  This proposal is no longer in the demo — its data resets from time to time. You can
+                  publish it again; it keeps the same identity.
+                </p>
+              ) : (
+                <p className="faint">
+                  Publishing shows this proposal to others searching here, with these times as possible
+                  windows, not appointments. It gives you no host role.
+                </p>
+              )}
               {publishError !== null ? <p className="notice notice--warn">{publishError}</p> : null}
               <button
                 type="button"
@@ -612,7 +698,7 @@ export function ActivitySearch({
                 disabled={publishing}
                 onClick={() => void publish()}
               >
-                {publishing ? 'Publishing…' : 'Publish this proposal'}
+                {publishing ? 'Publishing…' : status === 'missing' ? 'Publish it again' : 'Publish this proposal'}
               </button>
             </div>
           )}

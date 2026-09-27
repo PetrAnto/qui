@@ -19,7 +19,7 @@ results and proposal preview; same command).
 
 ```
 Test Files  25 passed (25)
-     Tests  366 passed (366)
+     Tests  371 passed (371)
 ```
 
 | Project | File | Tests |
@@ -43,8 +43,8 @@ Test Files  25 passed (25)
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
-| web | `test/api.test.ts` | 20 |
-| web | `test/activity-draft.test.ts` | 16 |
+| web | `test/api.test.ts` | 21 |
+| web | `test/activity-draft.test.ts` | 20 |
 | web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
@@ -157,6 +157,15 @@ Red on `3d44141`:
 - The persona e2e failed: the second persona saw the first persona's
   "Published proposal".
 
+Codex review `5329204446` on `2085948` raised two findings.
+- Publication records were kept one per actor, not per actor and inputs.
+- A cached record was taken as proof that the activity still exists.
+
+Red on `2085948`: 3 unit tests (A → B → A keeps A's key, a pending key
+survives, v2 migration) and all 4 new e2e scenarios failed. The tests for
+persona isolation and for a real server-store reset passed there, and are kept
+as preservation checks.
+
 A sixth regression, a minor seeing an adults-only signal listed on its author's
 profile, failed before the one-line fix in `getProfile`. The tests that passed
 throughout assert preserved behaviour: the author's own access, a restricted
@@ -212,9 +221,17 @@ The journey tests assert that no publish, join or respond request is sent.
 - publication refused in a city with no tie — draft kept, nothing created;
 - a failed publication retried without a duplicate;
 - another persona searching identical criteria sees its own unpublished
-  preview, and publishes independently.
+  preview, and publishes independently;
+- publish A, then B, then return to A (also after a reload): A's key is reused
+  and there is no duplicate;
+- a lost response for A, then B, then retrying A reuses A's original key;
+- after a demo-store reset with browser storage kept, an explicit
+  "Publish it again" recovers under the same key; nothing is republished
+  automatically;
+- a failed verification shows an unverified state with a retry, keeps the key,
+  and never publishes on its own.
 
-Total e2e: **34 tests**. Where they were executed for this branch is recorded in
+Total e2e: **38 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:
