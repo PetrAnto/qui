@@ -22,10 +22,15 @@ import {
   DURATIONS,
   EMPTY_DRAFT,
   clearContinuation,
+  inputsKey,
   loadDraft,
+  loadPublication,
+  newProposalKey,
   rememberReturnTo,
   saveDraft,
+  savePublication,
   takeResumeReady,
+  type PublicationRecord,
   type ActivityDraft,
   type DraftCity,
 } from '../lib/activity-draft';
@@ -57,6 +62,24 @@ const OUTCOME_MARKS: Readonly<Record<MatchReason['outcome'], string>> = {
   unknown: '?',
   info: '·',
 };
+
+/** What is known about a publication record's activity right now. */
+type Verification = 'verifying' | 'published' | 'missing' | 'unverified' | 'unavailable';
+
+const PUBLISH_FAILED =
+  'Publishing did not complete. Check your connection and try again — nothing is published twice.';
+
+/** The request body shared by search and publication: the same inputs, read the same way. */
+function inputsBody(draft: ActivityDraft, city: DraftCity) {
+  return {
+    practice: draft.practice,
+    geoScopeId: city.id,
+    slots: draft.slots,
+    durationMinutes: draft.durationMinutes,
+    ...(draft.level !== null ? { level: draft.level } : {}),
+    ...(draft.freeOnly !== null ? { freeOnly: draft.freeOnly } : {}),
+  };
+}
 
 const CITY_FAILED = 'Could not look up cities. Check your connection and try again.';
 
@@ -125,10 +148,13 @@ function previewFor(draft: ActivityDraft): ProposalPreview | null {
  */
 export function ActivitySearch({
   signedIn,
+  actorId,
   now,
   defaultCity,
 }: {
   signedIn: boolean;
+  /** The demo persona on this page; publication state belongs to it alone. */
+  actorId: string | null;
   now: string;
   defaultCity: DraftCity | null;
 }) {
@@ -140,11 +166,29 @@ export function ActivitySearch({
   const [cityError, setCityError] = useState<string | null>(null);
   const [view, setView] = useState<ActivitySearchView | null>(null);
   const [preview, setPreview] = useState<ProposalPreview | null>(null);
+  /** The exact inputs the visible preview (and results) were built from. */
+  const [submitted, setSubmitted] = useState<ActivityDraft | null>(null);
+  /** This actor's publication records, keyed by `inputsKey` — never another actor's. */
+  const [publications, setPublications] = useState<Readonly<Record<string, PublicationRecord>>>({});
+  /** Whether a record's activity was confirmed to still exist, per inputs. */
+  const [verification, setVerification] = useState<Readonly<Record<string, Verification>>>({});
+  const [publishingFor, setPublishingFor] = useState<string | null>(null);
+  const [publishErrors, setPublishErrors] = useState<Readonly<Record<string, string>>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const citySeq = useRef(createSearchSequence());
   const searchSeq = useRef(createSearchSequence());
   const resume = useRef(false);
+  const currentActor = useRef(actorId);
+  // A different persona is a different owner: drop the previous one's
+  // publication state from this page and load only the new actor's.
+  useEffect(() => {
+    currentActor.current = actorId;
+    setPublications({});
+    setVerification({});
+    setPublishErrors({});
+    setPublishingFor(null);
+  }, [actorId]);
 
   /**
    * Results and preview always describe the same submitted query: both are
@@ -157,25 +201,23 @@ export function ActivitySearch({
     const token = searchSeq.current.begin();
     setView(null);
     setError(null);
+    // A new search clears old messages; the keys themselves stay in the records.
+    setPublishErrors({});
     if (!signedIn || current.city === null || nextPreview === null) {
       setPreview(nextPreview);
+      setSubmitted(nextPreview === null ? null : current);
       return;
     }
     setPreview(null);
+    setSubmitted(null);
     setBusy(true);
     try {
-      const result = await api.post<ActivitySearchView>('/api/activities/search', {
-        practice: current.practice,
-        geoScopeId: current.city.id,
-        slots: current.slots,
-        durationMinutes: current.durationMinutes,
-        ...(current.level !== null ? { level: current.level } : {}),
-        ...(current.freeOnly !== null ? { freeOnly: current.freeOnly } : {}),
-      });
+      const result = await api.post<ActivitySearchView>('/api/activities/search', inputsBody(current, current.city));
       if (!searchSeq.current.isCurrent(token)) return;
       if (result.ok) {
         setView(result.value);
         setPreview(nextPreview);
+        setSubmitted(current);
       } else {
         setError(result.message);
       }
@@ -249,6 +291,98 @@ export function ActivitySearch({
     update({ city: { id: city.id, name: city.name, timezone: city.timezone }, slots: [] });
   }
 
+  /**
+   * A cached signal id is not proof that the activity still exists: the demo
+   * store lives in the server isolate and resets. Before a restored record is
+   * shown as published it is checked through the ordinary, permission-checked
+   * read (`GET /api/signals/:id`, the same `canReadSignal` as the page). The
+   * check only reads; it never publishes. A late answer for a previous persona
+   * is ignored.
+   */
+  async function verify(record: PublicationRecord, afterRepublish = false): Promise<void> {
+    const signalId = record.signalId;
+    if (signalId === null) return;
+    const { actorId: owner, inputs } = record;
+    setVerification((current) => ({ ...current, [inputs]: 'verifying' }));
+    let next: Verification;
+    try {
+      const result = await api.get(`/api/signals/${encodeURIComponent(signalId)}`);
+      next = result.ok
+        ? 'published'
+        : result.status === 404
+          ? // Still missing after an explicit republish means the server kept
+            // the id (removed or closed) and will not recreate it.
+            afterRepublish
+            ? 'unavailable'
+            : 'missing'
+          : 'unverified';
+    } catch {
+      next = 'unverified';
+    }
+    if (currentActor.current === owner) setVerification((current) => ({ ...current, [inputs]: next }));
+  }
+
+  // When a preview appears, bring back this actor's record for exactly those
+  // inputs and verify it once. Restoring never publishes.
+  useEffect(() => {
+    if (submitted === null || actorId === null || !signedIn) return;
+    const inputs = inputsKey(submitted);
+    const record = publications[inputs] ?? loadPublication(actorId, inputs);
+    if (record === null) return;
+    if (publications[inputs] === undefined) setPublications((current) => ({ ...current, [inputs]: record }));
+    if (record.signalId !== null && verification[inputs] === undefined) void verify(record);
+  }, [submitted, actorId]);
+
+  /**
+   * The one explicit Publish action. It publishes exactly the inputs the
+   * visible preview was built from, under a key reused for those inputs, so
+   * retries and double clicks reach the same activity. The draft is never
+   * cleared: a failure leaves everything in place for another try.
+   */
+  async function publish(): Promise<void> {
+    if (submitted === null || submitted.city === null || publishingFor !== null || actorId === null) return;
+    const owner = actorId;
+    const inputs = inputsKey(submitted);
+    // The key belongs to these inputs for this actor, pending, failed or
+    // published: A → B → A, or a retry after a lost answer, reuses it.
+    const record: PublicationRecord = publications[inputs] ??
+      loadPublication(owner, inputs) ?? { v: 2, actorId: owner, key: newProposalKey(), inputs, signalId: null };
+    const republishing = verification[inputs] === 'missing';
+    savePublication(record);
+    setPublications((current) => ({ ...current, [inputs]: record }));
+    setPublishingFor(inputs);
+    setPublishErrors((current) => {
+      const next = { ...current };
+      delete next[inputs];
+      return next;
+    });
+    try {
+      const result = await api.post<{ signalId: string; created: boolean }>('/api/activities/proposals', {
+        ...inputsBody(submitted, submitted.city),
+        proposalKey: record.key,
+      });
+      if (result.ok) {
+        const done: PublicationRecord = { ...record, signalId: result.value.signalId };
+        // Stored under its owner whatever happens next, so it is never lost.
+        savePublication(done);
+        // Applied to this page only if it still belongs to the same actor: a
+        // late answer for a previous persona never becomes somebody else's.
+        if (currentActor.current === owner) {
+          setPublications((current) => ({ ...current, [inputs]: done }));
+          // Freshly created: it exists. An existing one is checked, not assumed.
+          if (result.value.created) setVerification((current) => ({ ...current, [inputs]: 'published' }));
+          else void verify(done, republishing);
+        }
+      } else if (currentActor.current === owner) {
+        setPublishErrors((current) => ({ ...current, [inputs]: result.message }));
+      }
+    } catch {
+      if (currentActor.current === owner) setPublishErrors((current) => ({ ...current, [inputs]: PUBLISH_FAILED }));
+    } finally {
+      if (currentActor.current === owner) setPublishingFor(null);
+    }
+  }
+
   function continueToSignIn(): void {
     saveDraft(draft);
     rememberReturnTo('/search');
@@ -256,6 +390,15 @@ export function ActivitySearch({
   }
 
   const dates = draft.city === null ? [] : upcomingLocalDates(now, draft.city.timezone, 7);
+  const submittedInputs = submitted === null ? null : inputsKey(submitted);
+  const record =
+    submittedInputs === null || actorId === null ? null : (publications[submittedInputs] ?? null);
+  const ownRecord = record !== null && record.actorId === actorId ? record : null;
+  const status = submittedInputs === null ? undefined : verification[submittedInputs];
+  const published = ownRecord?.signalId != null && status === 'published' ? ownRecord.signalId : null;
+  const checking = ownRecord?.signalId != null && (status === undefined || status === 'verifying');
+  const publishing = publishingFor !== null && publishingFor === submittedInputs;
+  const publishError = submittedInputs === null ? null : (publishErrors[submittedInputs] ?? null);
   const ready = previewFor(draft) !== null;
 
   return (
@@ -479,7 +622,7 @@ export function ActivitySearch({
 
       {preview !== null ? (
         <section className="card card--pad stack stack--tight" aria-labelledby="preview-title">
-          <span className="chip chip--context">Preview — not published</span>
+          <span className="chip chip--context">{published !== null ? 'Published proposal' : 'Preview — not published'}</span>
           <h2 id="preview-title">{preview.title}</h2>
           <p className="muted">
             {preview.durationMinutes} min · local times in {preview.cityName}
@@ -504,9 +647,61 @@ export function ActivitySearch({
           <p className="faint">
             Equipment: not specified. {COST_LINES[preview.cost]}
           </p>
-          <p className="notice">
-            Publishing is not available in this demo. Nothing has been published or joined.
-          </p>
+          {!signedIn ? (
+            <p className="notice">Nothing has been published. Continue with demo access to publish it.</p>
+          ) : published !== null ? (
+            <div className="notice stack stack--tight" role="status">
+              <p>
+                Published. People looking for this in {preview.cityName} can now find it. It has no host
+                yet, so nobody can join it for now — and publishing it made you neither its host nor a
+                participant.
+              </p>
+              <Link className="btn btn--block" href={`/signals/${published}`}>
+                View your proposal
+              </Link>
+              <button type="button" className="btn btn--small" onClick={() => ownRecord !== null && void verify(ownRecord)}>
+                Check it is still published
+              </button>
+            </div>
+          ) : checking ? (
+            <p className="faint" role="status">
+              Checking that your proposal is still published…
+            </p>
+          ) : ownRecord?.signalId != null && status === 'unverified' ? (
+            <div className="notice notice--warn stack stack--tight" role="status">
+              <p>Could not check whether this proposal is still published.</p>
+              <button type="button" className="btn btn--small" onClick={() => void verify(ownRecord)}>
+                Check again
+              </button>
+            </div>
+          ) : ownRecord?.signalId != null && status === 'unavailable' ? (
+            <p className="notice" role="status">
+              This proposal is no longer available and cannot be published again.
+            </p>
+          ) : (
+            <div className="stack stack--tight">
+              {status === 'missing' ? (
+                <p className="notice" role="status">
+                  This proposal is no longer in the demo — its data resets from time to time. You can
+                  publish it again; it keeps the same identity.
+                </p>
+              ) : (
+                <p className="faint">
+                  Publishing shows this proposal to others searching here, with these times as possible
+                  windows, not appointments. It gives you no host role.
+                </p>
+              )}
+              {publishError !== null ? <p className="notice notice--warn">{publishError}</p> : null}
+              <button
+                type="button"
+                className="btn btn--primary btn--block"
+                disabled={publishing}
+                onClick={() => void publish()}
+              >
+                {publishing ? 'Publishing…' : status === 'missing' ? 'Publish it again' : 'Publish this proposal'}
+              </button>
+            </div>
+          )}
         </section>
       ) : null}
     </div>

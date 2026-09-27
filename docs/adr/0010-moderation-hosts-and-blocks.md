@@ -3,6 +3,12 @@
 **Status: LOCKED.** `INV-BLOCK-1`, `INV-HOST-1`, `INV-HOST-2`, `INV-MOD-1` and
 `INV-SUSPEND-1` do not move without a superseding ADR.
 
+> **Superseded in part by [ADR-0016](0016-activity-proposals-without-host.md)
+> (2026-09-26, owner decision P1):** host power belongs to an object's
+> *designated host* rather than, by definition, its creator. Every signal
+> created as before is hosted by its creator, so everything below still holds
+> for them. A hostless activity proposal has no host powers at all.
+
 ## Context
 
 Three different powers get conflated in social products, and the conflation is

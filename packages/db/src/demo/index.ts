@@ -192,6 +192,8 @@ export function buildDemoDataset(): SeedData {
   const signals: Signal[] = DEMO_SIGNALS.map((entry) => ({
     id: `sig-${entry.key}`,
     creatorId: userId(entry.creator),
+    hostId: userId(entry.creator),
+    plan: null,
     type: entry.type,
     title: entry.title,
     body: entry.body,

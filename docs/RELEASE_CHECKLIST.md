@@ -46,7 +46,7 @@ All four green, plus a completed `pnpm e2e` run (see
 
 ## 2. Safety — BLOCKERS
 
-- [ ] All 18 invariants in [SAFETY.md](SAFETY.md) pass against the *production*
+- [ ] All 19 invariants in [SAFETY.md](SAFETY.md) pass against the *production*
       repository implementation, not only the in-memory one.
 - [ ] **Moderation is staffed.** A queue with no human behind it is not
       moderation. Named people, working hours, escalation path, response-time

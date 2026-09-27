@@ -26,6 +26,9 @@ export type PolicyReason =
   | 'thread_closed'
   | 'content_removed'
   | 'no_local_attachment'
+  | 'no_city_attachment'
+  | 'proposal_adults_only'
+  | 'awaiting_host'
   | 'moderation_private';
 
 /**

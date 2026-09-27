@@ -147,6 +147,28 @@ export function canVouch(voucher: ActorView, subject: ActorView, blocked: boolea
   return ALLOW;
 }
 
+/**
+ * Publishing an activity proposal (ADR-0016, owner decision P5, adult-only
+ * demo). Proposing is not hosting: it needs an active adult account, the
+ * `publish` capability, and *any* existing attachment to that city —
+ * exploring or visiting included — but grants no host power. The attachment
+ * is never created on the person's behalf. Minors cannot propose while P6 is
+ * unapproved.
+ */
+export function canProposeActivity(
+  actor: ActorView,
+  geoScopeId: GeoScopeId,
+  evidence: EvidenceBundle,
+): Decision {
+  if (actor.accountState === 'suspended') return deny('account_suspended');
+  if (actor.ageBand !== 'adult_18_plus') return deny('proposal_adults_only');
+  if (!actor.capabilities.has('publish')) return deny('missing_capability');
+  if (!evidence.attachments.some((attachment) => attachment.geoScopeId === geoScopeId)) {
+    return deny('no_city_attachment');
+  }
+  return ALLOW;
+}
+
 export function canInvite(actor: ActorView): Decision {
   if (actor.accountState === 'suspended') return deny('account_suspended');
   return actor.capabilities.has('invite') ? ALLOW : deny('missing_capability');

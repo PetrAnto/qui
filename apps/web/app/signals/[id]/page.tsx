@@ -7,6 +7,8 @@ import { Avatar } from '../../../components/Avatar';
 import { HostControls } from '../../../components/HostControls';
 import { SafetyMenu } from '../../../components/SafetyMenu';
 import { SignalActions } from '../../../components/SignalActions';
+import { formatInterval } from '@indenoi/core';
+
 import { SIGNAL_LABELS, SIGNAL_VERBS, explain, relativeTime, untilTime } from '../../../lib/format';
 import { currentUserId } from '../../../lib/session';
 import { ports } from '../../../lib/store';
@@ -30,6 +32,7 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
       <div className="row row--wrap">
         <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
+        {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
         <span className="chip chip--demo">demo</span>
       </div>
 
@@ -40,7 +43,36 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
         </p>
       </header>
 
-      <p>{signal.body}</p>
+      {signal.body.length > 0 ? <p>{signal.body}</p> : null}
+
+      {signal.plan !== null ? (
+        <section className="card card--pad stack stack--tight" aria-labelledby="plan-title">
+          <h2 id="plan-title">Possible times</h2>
+          <p className="faint">
+            Candidate windows, local to {signal.cityName} — not appointments. About{' '}
+            {signal.plan.durationMinutes} min.
+          </p>
+          <ul className="reasons">
+            {signal.plan.windows.map((window) => (
+              <li key={window.start}>
+                {formatInterval(window, signal.plan?.timezone ?? 'UTC')}
+                {window.preferred ? ' ★ preferred' : ''}
+              </li>
+            ))}
+          </ul>
+          {signal.plan.level !== null && signal.plan.level.value !== 'any' ? (
+            <p className="muted">
+              Level: {signal.plan.level.value} — {signal.plan.level.mandatory ? 'required' : 'preferred'}
+            </p>
+          ) : null}
+          {signal.plan.freeOnly !== null ? (
+            <p className="muted">
+              Free to take part — {signal.plan.freeOnly.mandatory ? 'required' : 'preferred'}
+            </p>
+          ) : null}
+          <p className="faint">Equipment: not specified. Cost: not specified.</p>
+        </section>
+      ) : null}
 
       <div className="row row--wrap faint">
         {signal.placeLabel !== null ? <span className="chip">⌖ {signal.placeLabel}</span> : null}
@@ -63,7 +95,12 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
         </div>
       </Link>
 
-      {detail.isHost ? (
+      {signal.hostless && signal.creator.id === viewerId ? (
+        <p className="notice">
+          Your proposal. It has no host yet: nobody can join or answer it, and proposing it gave you
+          no host role.
+        </p>
+      ) : detail.isHost ? (
         <HostControls
           signalId={signal.id}
           responses={detail.responses}
@@ -98,7 +135,7 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
       <SafetyMenu
         targetType="signal"
         targetId={signal.id}
-        personId={detail.isHost ? undefined : signal.creator.id}
+        personId={detail.isHost || signal.creator.id === viewerId ? undefined : signal.creator.id}
         personName={signal.creator.displayName}
       />
     </>

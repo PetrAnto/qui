@@ -63,6 +63,8 @@ function legacySignal(overrides: Partial<Signal>): Signal {
   return {
     id: 'sig-legacy',
     creatorId: 'user-host',
+    hostId: 'user-host',
+    plan: null,
     type: 'join',
     title: 'Walk with Léa Martin from 12 rue des Fleurs',
     body: 'Call Léa on 06 00 00 00 00',

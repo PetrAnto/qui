@@ -339,6 +339,10 @@ export async function createSignal(
   await ports.repo.putSignal({
     id,
     creatorId: input.actorId,
+    // A signal created here is hosted by its creator, exactly as before
+    // (ADR-0016). Only an activity proposal is hostless.
+    hostId: input.actorId,
+    plan: null,
     type: input.type,
     title,
     body,

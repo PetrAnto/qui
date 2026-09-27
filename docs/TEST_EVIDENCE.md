@@ -18,22 +18,23 @@ results and proposal preview; same command).
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  24 passed (24)
-     Tests  334 passed (334)
+Test Files  25 passed (25)
+     Tests  371 passed (371)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 45 |
+| core | `test/safety-invariants.test.ts` | 49 |
 | core | `test/activity.test.ts` | 45 |
 | core | `test/search-input.test.ts` | 9 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
-| db | `test/d1.test.ts` | 18 |
+| db | `test/d1.test.ts` | 21 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
+| db | `test/proposals.test.ts` | 18 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -42,8 +43,8 @@ Test Files  24 passed (24)
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
-| web | `test/api.test.ts` | 17 |
-| web | `test/activity-draft.test.ts` | 12 |
+| web | `test/api.test.ts` | 21 |
+| web | `test/activity-draft.test.ts` | 20 |
 | web | `test/signal-page.test.ts` | 5 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
@@ -56,14 +57,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **45
-tests** in `safety-invariants.test.ts` cover the 18 invariants listed in [SAFETY.md](SAFETY.md):
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **49
+tests** in `safety-invariants.test.ts` cover the 19 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
-`INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`,
+`INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`, `INV-PROPOSAL-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 45.
+`analytics.test.ts`, so the gate reports more than 49.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -145,6 +146,26 @@ marker) and **all 5 e2e scenarios** failed. In the e2e, a reload re-sent the
 search, an ordinary visit sent it twice, an abandoned sign-in fired it later,
 stale suggestions stayed, and a failed lookup showed no message.
 
+Correction round on PR #47 at `3d44141`: regressions for two defects.
+- **R1:** publication was not atomic under concurrency.
+- **R2:** publication state was not scoped to the actor.
+
+Red on `3d44141`:
+- 4 unit tests failed: simultaneous identical requests gave two
+  `created: true` and double analytics/audit; a simultaneous request with
+  other inputs overwrote the winner; and two tests on actor-scoped records.
+- The persona e2e failed: the second persona saw the first persona's
+  "Published proposal".
+
+Codex review `5329204446` on `2085948` raised two findings.
+- Publication records were kept one per actor, not per actor and inputs.
+- A cached record was taken as proof that the activity still exists.
+
+Red on `2085948`: 3 unit tests (A → B → A keeps A's key, a pending key
+survives, v2 migration) and all 4 new e2e scenarios failed. The tests for
+persona isolation and for a real server-store reset passed there, and are kept
+as preservation checks.
+
 A sixth regression, a minor seeing an adults-only signal listed on its author's
 profile, failed before the one-line fix in `getProfile`. The tests that passed
 throughout assert preserved behaviour: the author's own access, a restricted
@@ -189,7 +210,28 @@ the network layer.
 
 The journey tests assert that no publish, join or respond request is sent.
 
-Total e2e: **30 tests**. Where they were executed for this branch is recorded in
+`e2e/activity-publish.spec.ts` adds **3 tests** for publishing a proposal
+(ADR-0016):
+- search with no prior match → one explicit Publish, clicked twice → the
+  created activity:
+  - it shows as hostless, with its windows as possible times and the
+    preference kept;
+  - it has no join control;
+  - it is listed once in Signals and found again by search;
+- publication refused in a city with no tie — draft kept, nothing created;
+- a failed publication retried without a duplicate;
+- another persona searching identical criteria sees its own unpublished
+  preview, and publishes independently;
+- publish A, then B, then return to A (also after a reload): A's key is reused
+  and there is no duplicate;
+- a lost response for A, then B, then retrying A reuses A's original key;
+- after a demo-store reset with browser storage kept, an explicit
+  "Publish it again" recovers under the same key; nothing is republished
+  automatically;
+- a failed verification shows an unverified state with a retry, keeps the key,
+  and never publishes on its own.
+
+Total e2e: **38 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:

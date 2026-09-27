@@ -69,6 +69,13 @@ export interface Repository {
   listSignals(filter?: { readonly geoScopeIds?: readonly GeoScopeId[] }): Promise<readonly Signal[]>;
   getSignal(id: SignalId): Promise<Signal | null>;
   putSignal(signal: Signal): Promise<Signal>;
+  /**
+   * Create-if-absent, atomically: stores `signal` only if no signal with its id
+   * exists, and reports whether it did. Two concurrent callers with the same id
+   * cannot both win, and the loser never overwrites the winner. Used where the
+   * id itself carries idempotency (activity proposals, ADR-0016).
+   */
+  insertSignal(signal: Signal): Promise<boolean>;
   listResponses(filter?: { readonly signalId?: SignalId }): Promise<readonly SignalResponse[]>;
   getResponse(id: string): Promise<SignalResponse | null>;
   putResponse(response: SignalResponse): Promise<void>;

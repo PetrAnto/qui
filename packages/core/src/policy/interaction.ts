@@ -46,6 +46,10 @@ export function canRespondToSignal(
   now: Instant,
 ): Decision {
   if (responder.id === creator.id) return deny('self');
+  // INV-PROPOSAL-1: a hostless proposal has nobody to accept a response or to
+  // be responsible for a gathering, so it can be neither answered nor joined.
+  // This is also what keeps every unapproved group/age rule out of reach.
+  if (signal.hostId === null) return deny('awaiting_host');
   if (graph.isBlockedBetween(responder.id, creator.id)) return deny('blocked');
   if (creator.accountState === 'suspended') return deny('author_suspended');
   // INV-HOST-1: exclusion from a hosted object is permanent for that object.
@@ -179,7 +183,7 @@ export function canReportOutcome(
   const active = requireActive(actor);
   if (!active.allowed) return active;
   if (signal.state === 'removed') return deny('content_removed');
-  if (signal.creatorId === actor.id) return ALLOW;
+  if (signal.hostId !== null && signal.hostId === actor.id) return ALLOW;
   if (membership.excluded) return deny('not_participant');
   if (membership.joined) return ALLOW;
   if (opensPrivateThread(signal.type) && membership.acceptedResponse) return ALLOW;
@@ -203,7 +207,9 @@ export type HostPower =
  * is no code path that widens them to the platform.
  */
 export function canExerciseHostPower(actor: ActorView, signal: Signal, _power: HostPower): Decision {
-  if (signal.creatorId !== actor.id) return deny('not_host');
+  // INV-HOST-2 / ADR-0016: the designated host, not authorship. A hostless
+  // proposal has no host, so nobody holds these powers over it.
+  if (signal.hostId === null || signal.hostId !== actor.id) return deny('not_host');
   if (signal.state === 'removed') return deny('content_removed');
   const active = requireActive(actor);
   if (!active.allowed) return active;

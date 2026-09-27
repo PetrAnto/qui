@@ -93,6 +93,8 @@ export function signal(
   return {
     id,
     creatorId,
+    hostId: creatorId,
+    plan: null,
     type,
     title: 'a signal',
     body: 'body',

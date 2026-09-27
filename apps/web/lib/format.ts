@@ -69,6 +69,9 @@ export const REASON_LABELS: Readonly<Record<PolicyReason, string>> = {
   thread_closed: 'This conversation is closed.',
   content_removed: 'This content has been removed.',
   no_local_attachment: 'Add a real tie to this place before publishing here.',
+  no_city_attachment: 'Add this city to your places first — exploring it is enough to propose here.',
+  proposal_adults_only: 'Proposing activities is open to adults for now.',
+  awaiting_host: 'This is a proposal with no host yet, so nobody can join or answer it for now.',
   moderation_private: 'Moderation records are private.',
 };
 

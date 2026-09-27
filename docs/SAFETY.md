@@ -5,7 +5,7 @@ trade against features. Weakening one requires a superseding ADR and a recorded
 product-owner decision — not a pull request.
 
 Each `INV-` identifier below corresponds to a `describe()` block in
-`packages/core/test/safety-invariants.test.ts` (45 tests). CI runs them twice:
+`packages/core/test/safety-invariants.test.ts` (49 tests). CI runs them twice:
 once inside the full suite, and once as a separate named gate
 (`pnpm test:safety`), so that a failure is legible as *a safety failure* rather
 than as one red line among many.
@@ -66,7 +66,8 @@ to watch, which is the exact failure the button exists to prevent.
 | ID | Rule | Enforced in |
 |---|---|---|
 | `INV-HOST-1` | A host exclusion prevents rejoining *that object* and any further response on it — permanently. | `policy/interaction.ts` |
-| `INV-HOST-2` | Host power is local to the hosted object. It is granted only to that object's creator, it does not follow the excluded person anywhere else, and it never becomes moderation. | `policy/interaction.ts` |
+| `INV-HOST-2` | Host power is local to the hosted object. It is granted only to that object's **designated host** (`hostId`; the creator for every Join, Event, Ask and Offer created as before, nobody for a hostless proposal — [ADR-0016](adr/0016-activity-proposals-without-host.md)), it does not follow the excluded person anywhere else, and it never becomes moderation. | `policy/interaction.ts` |
+| `INV-PROPOSAL-1` | A signal with no designated host — an activity proposal — accepts no join and no response (`awaiting_host`), opens no thread, and gives its proposer neither host power nor participation. Publishing one requires an active adult account with `publish` and an existing attachment to that city; no attachment is ever created on the proposer's behalf. | `policy/interaction.ts`, `policy/capabilities.ts` (`canProposeActivity`), `services/proposals.ts` |
 | `INV-MOD-1` | Moderation material is private to the moderation function. A report is visible to its author and to moderators — never to the reported person. Machine triage labels may be attached; they never decide. | `policy/access.ts`, `services/write.ts` |
 | `INV-SUSPEND-1` | A suspended account and its content disappear and it can respond to nothing; it retains read access to its own state so it can appeal. A `distribution_restricted` account keeps its voice but loses amplification — out of others' feeds and out of people discovery, still visible to its author. For signals, `canReadSignal` hides a suspended author's signal from others everywhere, direct links included. `canViewSignal` additionally keeps a restricted author's signals out of lists and search, while direct links still work. Both run before projection or matching. | `policy/capabilities.ts`, `policy/access.ts` (`canReadSignal`, `canViewSignal`) |
 
@@ -74,7 +75,7 @@ to watch, which is the exact failure the button exists to prevent.
 
 | ID | Rule | Enforced in |
 |---|---|---|
-| `INV-OUTCOME-1` | "It actually happened" can be reported only by someone who is part of the signal **now**: its host (creator); for a Join or Event, a participant *currently* in state `joined`; for an Ask or Offer, a responder whose response the host accepted. An old accepted response never stands in for group membership, so a participant the host removed or excluded cannot report, whatever their response history. Also refused: an unrelated account, a pending, declined or withdrawn responder, anyone the host excluded from that object, a moderator acting as such, and a suspended account; a removed signal accepts none. A report is a **self-report**: it never records verified attendance and no capability derives from it. | `policy/interaction.ts` (`canReportOutcome`), `services/write.ts` (`recordLocalOutcome`) |
+| `INV-OUTCOME-1` | "It actually happened" can be reported only by someone who is part of the signal **now**: its designated host (the creator for signals created as before; a hostless proposal has none); for a Join or Event, a participant *currently* in state `joined`; for an Ask or Offer, a responder whose response the host accepted. An old accepted response never stands in for group membership, so a participant the host removed or excluded cannot report, whatever their response history. Also refused: an unrelated account, a pending, declined or withdrawn responder, anyone the host excluded from that object, a moderator acting as such, and a suspended account; a removed signal accepts none. A report is a **self-report**: it never records verified attendance and no capability derives from it. | `policy/interaction.ts` (`canReportOutcome`), `services/write.ts` (`recordLocalOutcome`) |
 
 The local outcome is the metric the product exists to move, which is exactly why
 a stranger must not be able to add to it.

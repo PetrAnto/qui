@@ -112,7 +112,9 @@ test('with nothing open, still offers the proposal the search would become', asy
   // A preference for free is not a confirmed free cost; no equipment data is not "no equipment".
   await expect(page.getByText('Cost: free preferred, not confirmed.')).toBeVisible();
   await expect(page.getByText('Equipment: not specified.')).toBeVisible();
-  await expect(page.getByText('Publishing is not available in this demo.')).toBeVisible();
+  // Onboarded in Ajaccio, this persona has no tie to Montpellier: the preview offers publication,
+  // and publication itself is checked on the server (see the publication spec).
+  await expect(page.getByRole('button', { name: 'Publish this proposal' })).toBeVisible();
   await expect(page.getByText(/owner decision/i)).toHaveCount(0);
 
   expect(writes).toEqual([]);

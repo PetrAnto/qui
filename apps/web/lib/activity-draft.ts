@@ -207,3 +207,106 @@ export function clearContinuation(): void {
     // Nothing to clear.
   }
 }
+
+// ---------------------------------------------------------------------------
+// Publication (ADR-0016): one key per set of inputs, kept with the draft.
+// ---------------------------------------------------------------------------
+
+/**
+ * Publication records live under this key as a map from actor id to a map
+ * from `inputsKey` to that record, so every proposal an actor published or
+ * tried to publish keeps its own key. The v2 layout (one record per actor)
+ * is read as a fallback so owned records migrate with their keys unchanged;
+ * the unowned v1 key is never read.
+ */
+export const PUBLICATION_KEY = 'qui.activity-search.publication.v3';
+const LEGACY_PUBLICATION_KEY = 'qui.activity-search.publication.v2';
+const PROPOSAL_KEY = /^[a-z0-9][a-z0-9-]{7,63}$/;
+
+/**
+ * What one actor published — or is publishing — from which inputs. The same
+ * actor with the same inputs reuses the same key, so a retry, a reload or a
+ * double click can only ever reach the one activity the server derives from
+ * it. Changing any input, or being somebody else, means a new proposal and a
+ * new key: a record is never shown to, or reused by, another actor.
+ */
+export interface PublicationRecord {
+  readonly v: 2;
+  /** The demo persona that published it. */
+  readonly actorId: string;
+  readonly key: string;
+  /** `inputsKey(draft)` of the inputs this key publishes. */
+  readonly inputs: string;
+  /** Set once the server confirmed the activity. */
+  readonly signalId: string | null;
+}
+
+/** A stable identity for the inputs a proposal publishes; the key itself is excluded. */
+export function inputsKey(draft: ActivityDraft): string {
+  return JSON.stringify({
+    practice: draft.practice.trim(),
+    city: draft.city?.id ?? null,
+    slots: [...draft.slots]
+      .map((slot) => `${slot.date}:${slot.part}:${slot.preferred ? 1 : 0}`)
+      .sort(),
+    durationMinutes: draft.durationMinutes,
+    level: draft.level,
+    freeOnly: draft.freeOnly,
+  });
+}
+
+export function newProposalKey(): string {
+  const random =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return random.toLowerCase();
+}
+
+export function parsePublication(value: unknown): PublicationRecord | null {
+  if (!isRecord(value) || value['v'] !== 2) return null;
+  const { actorId, key, inputs, signalId } = value;
+  if (typeof actorId !== 'string' || actorId.length === 0) return null;
+  if (typeof key !== 'string' || !PROPOSAL_KEY.test(key) || typeof inputs !== 'string') return null;
+  if (signalId !== null && (typeof signalId !== 'string' || !signalId.startsWith('sig-p-'))) return null;
+  return { v: 2, actorId, key, inputs, signalId };
+}
+
+function readMap(key: string): Record<string, unknown> {
+  try {
+    const raw = storage()?.getItem(key) ?? null;
+    const value: unknown = raw === null ? {} : JSON.parse(raw);
+    return isRecord(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+/** This actor's record for these exact inputs, if any — never anybody else's. */
+export function loadPublication(actorId: string, inputs: string): PublicationRecord | null {
+  const byInputs = readMap(PUBLICATION_KEY)[actorId];
+  const current = parsePublication(isRecord(byInputs) ? byInputs[inputs] : undefined);
+  if (current !== null && current.actorId === actorId && current.inputs === inputs) return current;
+  // Migration: an owned v2 record keeps working, with its key unchanged.
+  const legacy = parsePublication(readMap(LEGACY_PUBLICATION_KEY)[actorId]);
+  return legacy !== null && legacy.actorId === actorId && legacy.inputs === inputs ? legacy : null;
+}
+
+export function savePublication(record: PublicationRecord): void {
+  try {
+    const all = readMap(PUBLICATION_KEY);
+    const existing = all[record.actorId];
+    const mine: Record<string, unknown> = isRecord(existing) ? { ...existing } : {};
+    // Carry a still-unmigrated v2 record along, so saving one proposal never
+    // drops the key of another.
+    const legacy = parsePublication(readMap(LEGACY_PUBLICATION_KEY)[record.actorId]);
+    if (legacy !== null && legacy.actorId === record.actorId && mine[legacy.inputs] === undefined) {
+      mine[legacy.inputs] = legacy;
+    }
+    mine[record.inputs] = record;
+    storage()?.setItem(PUBLICATION_KEY, JSON.stringify({ ...all, [record.actorId]: mine }));
+  } catch {
+    // Without storage a retry after a reload gets a fresh key; within the page
+    // the key is kept in memory, so a double click still reaches one activity.
+  }
+}

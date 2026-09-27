@@ -253,6 +253,35 @@ describe('store parity: geography', () => {
   });
 });
 
+describe('activity proposals (ADR-0016)', () => {
+  it('reads every stored signal as hosted by its creator', async () => {
+    for (const signal of await d1.listSignals()) {
+      expect(signal.hostId).toBe(signal.creatorId);
+      expect(signal.plan).toBeNull();
+    }
+  });
+
+  it('refuses to persist a hostless proposal rather than silently turning it into a hosted join', async () => {
+    const [existing] = await d1.listSignals();
+    if (existing === undefined) throw new Error('no seeded signal');
+    await expect(d1.putSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
+    expect(await d1.getSignal('sig-p-refused')).toBeNull();
+    await expect(d1.insertSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
+  });
+
+  it('creates a hosted signal only if absent, like the in-memory store', async () => {
+    const [existing] = await d1.listSignals();
+    if (existing === undefined) throw new Error('no seeded signal');
+    const fresh = { ...existing, id: 'sig-insert-once', title: 'first' };
+    expect(await d1.insertSignal(fresh)).toBe(true);
+    expect(await d1.insertSignal({ ...fresh, title: 'second' })).toBe(false);
+    expect((await d1.getSignal('sig-insert-once'))?.title).toBe('first');
+    expect(await mem.insertSignal(fresh)).toBe(true);
+    expect(await mem.insertSignal({ ...fresh, title: 'second' })).toBe(false);
+    expect((await mem.getSignal('sig-insert-once'))?.title).toBe('first');
+  });
+});
+
 describe('store parity: content and the product loop', () => {
   it('lists and filters posts identically', async () => {
     expect(await d1.listPosts()).toEqual(await mem.listPosts());

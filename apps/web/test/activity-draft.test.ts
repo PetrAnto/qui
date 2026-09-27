@@ -5,6 +5,11 @@ import {
   EMPTY_DRAFT,
   RETURN_KEY,
   clearContinuation,
+  inputsKey,
+  loadPublication,
+  newProposalKey,
+  parsePublication,
+  savePublication,
   loadDraft,
   markResumeReady,
   parseDraft,
@@ -161,5 +166,111 @@ describe('resuming a search after the demo identity flow', () => {
     delete scope.window;
     expect(() => markResumeReady()).not.toThrow();
     expect(takeResumeReady()).toBe(false);
+  });
+});
+
+describe('the publication record', () => {
+  it('reuses one key for the same inputs and changes it for different ones', () => {
+    const key = newProposalKey();
+    expect(key).toMatch(/^[a-z0-9][a-z0-9-]{7,63}$/);
+    expect(inputsKey(DRAFT)).toBe(inputsKey({ ...DRAFT, slots: [...DRAFT.slots].reverse() }));
+    expect(inputsKey(DRAFT)).not.toBe(inputsKey({ ...DRAFT, durationMinutes: 60 }));
+    expect(inputsKey(DRAFT)).not.toBe(inputsKey({ ...DRAFT, freeOnly: null }));
+  });
+
+  it('round-trips, and rejects anything tampered', () => {
+    const record = {
+      v: 2 as const,
+      actorId: 'usr-lea',
+      key: newProposalKey(),
+      inputs: inputsKey(DRAFT),
+      signalId: null,
+    };
+    savePublication(record);
+    expect(loadPublication('usr-lea', record.inputs)).toEqual(record);
+    const done = { ...record, signalId: 'sig-p-usr-lea-abc12345' };
+    savePublication(done);
+    expect(loadPublication('usr-lea', record.inputs)).toEqual(done);
+    for (const value of [
+      'nope',
+      { ...record, key: 'BAD KEY' },
+      { ...record, signalId: 'sig-other' },
+      { ...record, v: 1 },
+      { ...record, actorId: '' },
+    ]) {
+      expect(parsePublication(value)).toBeNull();
+    }
+  });
+});
+
+describe('publication state belongs to one actor', () => {
+  it('never shows persona A’s publication to persona B', () => {
+    const record = {
+      v: 2 as const,
+      actorId: 'usr-lea',
+      key: newProposalKey(),
+      inputs: inputsKey(DRAFT),
+      signalId: 'sig-p-usr-lea-abc12345',
+    };
+    savePublication(record);
+    expect(loadPublication('usr-lea', record.inputs)).toEqual(record);
+    expect(loadPublication('usr-marc', record.inputs)).toBeNull();
+  });
+
+  it('ignores legacy records that carry no owner', () => {
+    scope.window?.sessionStorage.setItem(
+      'qui.activity-search.publication.v1',
+      JSON.stringify({ v: 1, key: newProposalKey(), inputs: inputsKey(DRAFT), signalId: 'sig-p-usr-lea-abc12345' }),
+    );
+    expect(loadPublication('usr-lea', inputsKey(DRAFT))).toBeNull();
+    expect(loadPublication('usr-marc', inputsKey(DRAFT))).toBeNull();
+  });
+});
+
+describe('publication records are kept per actor and per inputs', () => {
+  const record = (actorId: string, inputs: string, signalId: string | null = null) => ({
+    v: 2 as const,
+    actorId,
+    key: newProposalKey(),
+    inputs,
+    signalId,
+  });
+  const A = inputsKey(DRAFT);
+  const B = inputsKey({ ...DRAFT, durationMinutes: 60 });
+
+  it('A → B → A reuses A’s original key', () => {
+    const a = record('usr-lea', A, 'sig-p-usr-lea-aaaaaaaa');
+    const b = record('usr-lea', B, 'sig-p-usr-lea-bbbbbbbb');
+    savePublication(a);
+    savePublication(b);
+    expect(loadPublication('usr-lea', A)).toEqual(a);
+    expect(loadPublication('usr-lea', B)).toEqual(b);
+  });
+
+  it('keeps the key of a pending or failed publication while others are made', () => {
+    const pending = record('usr-lea', A);
+    savePublication(pending);
+    savePublication(record('usr-lea', B, 'sig-p-usr-lea-bbbbbbbb'));
+    expect(loadPublication('usr-lea', A)?.key).toBe(pending.key);
+    expect(loadPublication('usr-lea', A)?.signalId).toBeNull();
+  });
+
+  it('migrates an owned v2 record without changing its key, and still ignores unowned ones', () => {
+    const owned = record('usr-lea', A, 'sig-p-usr-lea-aaaaaaaa');
+    scope.window?.sessionStorage.setItem('qui.activity-search.publication.v2', JSON.stringify({ 'usr-lea': owned }));
+    expect(loadPublication('usr-lea', A)).toEqual(owned);
+    expect(loadPublication('usr-marc', A)).toBeNull();
+    // Saving another proposal must not lose the migrated one.
+    savePublication(record('usr-lea', B));
+    expect(loadPublication('usr-lea', A)?.key).toBe(owned.key);
+  });
+
+  it('keeps personas apart for the same inputs', () => {
+    const lea = record('usr-lea', A);
+    const marc = record('usr-marc', A);
+    savePublication(lea);
+    savePublication(marc);
+    expect(loadPublication('usr-lea', A)?.key).toBe(lea.key);
+    expect(loadPublication('usr-marc', A)?.key).toBe(marc.key);
   });
 });

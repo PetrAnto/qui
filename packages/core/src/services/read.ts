@@ -362,7 +362,7 @@ export async function listSignals(
         participants.filter((entry) => entry.signalId === signal.id && entry.state === 'joined').length,
       ),
       eligibility: canRespondToSignal(context.viewer, signal, creatorView, context.graph, context.now),
-      isHost: signal.creatorId === input.viewerId,
+      isHost: signal.hostId === input.viewerId,
       opensPrivateThread: opensPrivateThread(signal.type),
     });
   }
@@ -404,7 +404,7 @@ export async function getSignalDetail(
     ports.repo.listResponses({ signalId: signal.id }),
   ]);
   const joined = participants.filter((entry) => entry.state === 'joined');
-  const isHost = signal.creatorId === input.viewerId;
+  const isHost = signal.hostId === input.viewerId;
 
   const visibleIds = visibleParticipants(
     context.viewer,
