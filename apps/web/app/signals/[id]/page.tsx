@@ -37,7 +37,9 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
         <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
         {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
-        {designatedHost !== null ? <span className="chip chip--context">Proposal · hosted</span> : null}
+        {!signal.hostless && signal.plan !== null ? (
+          <span className="chip chip--context">Proposal · hosted</span>
+        ) : null}
         <span className="chip chip--demo">demo</span>
       </div>
 

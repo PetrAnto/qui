@@ -567,6 +567,43 @@ describe('the designated host counts for visibility too (INV-BLOCK-1, INV-SUSPEN
     expect(await visibleTo(DEMO_USERS.hugo, id)).toEqual({ detail: false, listed: false, searched: false });
   });
 
+  it('never names a suspended host to the proposer, in detail, list or their own profile', async () => {
+    const id = await hosted();
+    await setState(DEMO_USERS.lea, 'suspended');
+
+    // The central profile rule already hides Léa, and other viewers lose the activity.
+    expect(await getProfile(ports, { viewerId: DEMO_USERS.marc, handle: 'demo-lea' })).toBeNull();
+    expect(await getSignalDetail(ports, { viewerId: DEMO_USERS.hugo, signalId: id })).toBeNull();
+
+    const detail = await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id });
+    const card = (await listSignals(ports, { viewerId: DEMO_USERS.marc, geoScopeId: CITY_IDS.ajaccio }))?.find(
+      (entry) => entry.signal.id === id,
+    );
+    const own = (await getProfile(ports, { viewerId: DEMO_USERS.marc, handle: 'demo-marc' }))?.signals.find(
+      (signal) => signal.id === id,
+    );
+    // Marc keeps his own activity; only the host's identity is withheld.
+    expect(detail?.signal.id).toBe(id);
+    expect(card?.signal.id).toBe(id);
+    expect(own?.id).toBe(id);
+    expect([detail?.signal.host, card?.signal.host, own?.host]).toEqual([null, null, null]);
+    expect(JSON.stringify([detail, card, own])).not.toContain(DEMO_USERS.lea);
+    // Nothing is granted and nothing is removed: still no join, the assignment stays.
+    expect(detail).toMatchObject({ isHost: false, hostPowers: [] });
+    expect((await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).ok).toBe(false);
+    expect((await ports.repo.getSignal(id))?.hostId).toBe(DEMO_USERS.lea);
+
+    // The suspended host keeps seeing their own state.
+    const asHost = await getSignalDetail(ports, { viewerId: DEMO_USERS.lea, signalId: id });
+    expect(asHost?.signal.host?.id).toBe(DEMO_USERS.lea);
+
+    // Reinstated, the host is named again.
+    await setState(DEMO_USERS.lea, 'active');
+    expect((await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id }))?.signal.host?.id).toBe(
+      DEMO_USERS.lea,
+    );
+  });
+
   it('lets the proposer keep reading their own activity, without naming a host they are blocked with', async () => {
     const id = await hosted();
     await blockUser(ports, { actorId: DEMO_USERS.marc, targetId: DEMO_USERS.lea });

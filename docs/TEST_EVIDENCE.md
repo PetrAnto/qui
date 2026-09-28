@@ -21,7 +21,7 @@ activity proposals, ADR-0017 / `INV-HOST-3`; same command).
 
 ```
 Test Files  26 passed (26)
-     Tests  416 passed (416)
+     Tests  418 passed (418)
 ```
 
 | Project | File | Tests |
@@ -37,7 +37,7 @@ Test Files  26 passed (26)
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
 | db | `test/proposals.test.ts` | 18 |
-| db | `test/host-designation.test.ts` | 32 |
+| db | `test/host-designation.test.ts` | 33 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -48,7 +48,7 @@ Test Files  26 passed (26)
 | web | `test/ui.test.ts` | 14 |
 | web | `test/api.test.ts` | 23 |
 | web | `test/activity-draft.test.ts` | 20 |
-| web | `test/signal-page.test.ts` | 8 |
+| web | `test/signal-page.test.ts` | 9 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |

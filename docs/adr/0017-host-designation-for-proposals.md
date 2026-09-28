@@ -100,8 +100,11 @@ From then on, the existing hosted Join rules apply unchanged:
   A distribution-restricted host is not amplified through it. A caller that
   omits a distinct host is refused (`not_host`).
 
-  The proposer keeps reading their own activity. If they are blocked with its
-  host, the host is not named to them.
+  The proposer keeps reading their own activity. The host is named to them
+  only if the central profile rule (`canViewProfile`) lets them see the host,
+  so a host they are blocked with, or a suspended host, is not named. The
+  stored assignment is unchanged, and a suspended host still sees their own
+  state.
 - Age and audience rules are exactly those of an ordinary hosted Join.
 - **Having proposed does not make the proposer contactable.** Only a signal
   that a person hosts gives a reason to contact them.

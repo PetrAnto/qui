@@ -108,6 +108,20 @@ describe('the rendered page of a proposal hosted by somebody else', () => {
     expect(html).not.toContain('Close it to new people');
   });
 
+  it('does not expose a suspended host to the proposer on the rendered page', async () => {
+    const id = await marcProposalHostedByLea();
+    await setState(DEMO_USERS.lea, 'suspended');
+    const html = await render(DEMO_USERS.marc, id);
+    expect(html).toContain('Proposal · hosted');
+    expect(html).not.toContain('Hosted by');
+    expect(html).not.toContain('Léa');
+    expect(html).not.toContain('demo-lea');
+    expect(html).not.toContain('Ask to join');
+    expect(html).not.toContain('Close it to new people');
+    expect(html).not.toContain('no host yet');
+    expect(html).not.toContain('Offer to host');
+  });
+
   it('keeps the proposer of a hostless proposal without any participation action', async () => {
     const published = await publishProposal(getStore().ports, {
       actorId: DEMO_USERS.marc,

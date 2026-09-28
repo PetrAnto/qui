@@ -407,14 +407,17 @@ export interface SignalDetail extends SignalCard {
 }
 
 /**
- * The designated host as a person, or null for a hostless proposal. Never
- * named to somebody they are blocked with (INV-BLOCK-1): only the proposer can
- * still read a proposal whose host they are blocked with, and they do not see
- * who that is.
+ * The designated host as a person, or null for a hostless proposal. The host
+ * is named only to a viewer who may view their profile — the one central rule
+ * (`canViewProfile`): never across a block (INV-BLOCK-1), never while the host
+ * is suspended (INV-SUSPEND-1), always to the host themself. The proposer keeps
+ * reading their own activity; they just do not see a host hidden from them.
+ * The stored assignment is untouched.
  */
 function hostPersonOf(context: ReadContext, signal: Signal): Person | null {
   if (signal.hostId === null) return null;
-  if (context.graph.isBlockedBetween(context.viewer.id, signal.hostId)) return null;
+  const host = context.actors.get(signal.hostId);
+  if (host === undefined || !canViewProfile(context.viewer, host, context.graph).allowed) return null;
   return context.people.get(signal.hostId) ?? null;
 }
 
