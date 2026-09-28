@@ -72,6 +72,15 @@ From then on, the existing hosted Join rules apply unchanged:
   a response. `canRespondToSignal` refuses (`not_host`) any caller that does
   not supply the designated host, so it can never check against the wrong
   person by mistake.
+- **Visibility accounts for both people too.** `canReadSignal` and
+  `canViewSignal` apply the block (`INV-BLOCK-1`, both directions) and
+  suspension rules to the designated host, as they always did to the author.
+  So someone blocked with the host neither reads, lists nor finds the activity.
+  A distribution-restricted host is not amplified through it. A caller that
+  omits a distinct host is refused (`not_host`).
+
+  The proposer keeps reading their own activity. If they are blocked with its
+  host, the host is not named to them.
 - Age and audience rules are exactly those of an ordinary hosted Join.
 - **Having proposed does not make the proposer contactable.** Only a signal
   that a person hosts gives a reason to contact them.
@@ -100,6 +109,15 @@ designate a host. Production persistence stays out of scope.
   Once designated, a host stays the host for that activity.
 - No analytics event was added; the closed vocabulary is unchanged. Audit rows
   `host_offered` and `host_designated` record both acts.
+- **Known limits, left as they are:**
+  - The signal page's safety menu (report, block) targets the proposer. The
+    designated host can be reported or blocked from their profile, which the
+    "Hosted by" card links to.
+  - The matcher's descriptive model (`activity/describe.ts`) still names the
+    proposer as `organizerId`. It grants no power; it only counts
+    participation.
+  - Two simultaneous identical first offers can write two `host_offered` audit
+    rows. The offer itself is an upsert, so the state stays single.
 
 ## Alternatives considered
 

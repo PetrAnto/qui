@@ -263,7 +263,7 @@ export async function getProfile(
     (signal) =>
       signal.creatorId === person.id &&
       signal.state === 'open' &&
-      canReadSignal(context.viewer, signal, subject, context.graph).allowed,
+      canReadSignal(context.viewer, signal, subject, context.graph, hostViewOf(context, signal)).allowed,
   );
   const participants = await ports.repo.listParticipants();
   const publicSignals = openSignals.map((signal) =>
@@ -358,7 +358,9 @@ export async function listSignals(
     if (creator === undefined || creatorView === undefined) continue;
     // Removed content, blocked pairs, suspended or restricted authors and
     // adult-only audiences are all decided by one policy, before projection.
-    if (!canViewSignal(context.viewer, signal, creatorView, context.graph).allowed) continue;
+    if (!canViewSignal(context.viewer, signal, creatorView, context.graph, hostViewOf(context, signal)).allowed) {
+      continue;
+    }
 
     cards.push({
       signal: toPublicSignal(
@@ -404,9 +406,16 @@ export interface SignalDetail extends SignalCard {
   readonly canVolunteer: Decision;
 }
 
-/** The designated host as a person, or null for a hostless proposal. */
+/**
+ * The designated host as a person, or null for a hostless proposal. Never
+ * named to somebody they are blocked with (INV-BLOCK-1): only the proposer can
+ * still read a proposal whose host they are blocked with, and they do not see
+ * who that is.
+ */
 function hostPersonOf(context: ReadContext, signal: Signal): Person | null {
-  return signal.hostId === null ? null : (context.people.get(signal.hostId) ?? null);
+  if (signal.hostId === null) return null;
+  if (context.graph.isBlockedBetween(context.viewer.id, signal.hostId)) return null;
+  return context.people.get(signal.hostId) ?? null;
 }
 
 /** The designated host as policy sees them, or null for a hostless proposal. */
@@ -428,7 +437,9 @@ export async function getSignalDetail(
   // Checked before anything else about the signal is loaded or projected. A
   // refusal is indistinguishable from a signal that does not exist, so the
   // page shows its plain not-found rather than a title with a refusal notice.
-  if (!canReadSignal(context.viewer, signal, creatorView, context.graph).allowed) return null;
+  if (!canReadSignal(context.viewer, signal, creatorView, context.graph, hostViewOf(context, signal)).allowed) {
+    return null;
+  }
 
   const [participants, responses] = await Promise.all([
     ports.repo.listParticipants(signal.id),

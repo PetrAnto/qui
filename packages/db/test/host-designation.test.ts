@@ -16,6 +16,7 @@ import {
   removeCity,
   removeParticipant,
   respondToSignal,
+  searchActivities,
   volunteerToHost,
   type AccountState,
   type ActivitySearchInput,
@@ -425,6 +426,59 @@ describe('joining after designation keeps every existing restriction', () => {
     const card = cards?.find((entry) => entry.signal.id === id);
     expect(card?.signal.host?.id).toBe(DEMO_USERS.lea);
     expect(card?.eligibility).toEqual({ allowed: true });
+  });
+});
+
+describe('the designated host counts for visibility too (INV-BLOCK-1, INV-SUSPEND-1)', () => {
+  async function visibleTo(viewerId: string, id: string) {
+    const detail = await getSignalDetail(ports, { viewerId, signalId: id });
+    const cards = await listSignals(ports, { viewerId, geoScopeId: CITY_IDS.ajaccio });
+    const found = await searchActivities(ports, {
+      viewerId,
+      input: { practice: 'paddle', geoScopeId: CITY_IDS.ajaccio, slots: [PADDLE.slots[0]!], durationMinutes: 90 },
+    });
+    return {
+      detail: detail !== null,
+      listed: cards?.some((card) => card.signal.id === id) ?? false,
+      searched: found.ok && found.value.results.some((result) => result.match.signalId === id),
+    };
+  }
+
+  it('hides a hosted proposal from somebody who blocked its host', async () => {
+    const id = await hosted();
+    expect(await visibleTo(DEMO_USERS.hugo, id)).toEqual({ detail: true, listed: true, searched: true });
+
+    await blockUser(ports, { actorId: DEMO_USERS.hugo, targetId: DEMO_USERS.lea });
+    expect(await visibleTo(DEMO_USERS.hugo, id)).toEqual({ detail: false, listed: false, searched: false });
+  });
+
+  it('hides it just the same when the host is the one who blocked', async () => {
+    const id = await hosted();
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.hugo });
+    expect(await visibleTo(DEMO_USERS.hugo, id)).toEqual({ detail: false, listed: false, searched: false });
+  });
+
+  it('hides it from Marc\'s profile for somebody blocked with the host', async () => {
+    const id = await hosted();
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.hugo });
+    const profile = await getProfile(ports, { viewerId: DEMO_USERS.hugo, handle: 'demo-marc' });
+    expect(profile?.signals.map((signal) => signal.id) ?? []).not.toContain(id);
+  });
+
+  it('hides it while its host is suspended', async () => {
+    const id = await hosted();
+    await setState(DEMO_USERS.lea, 'suspended');
+    expect(await visibleTo(DEMO_USERS.hugo, id)).toEqual({ detail: false, listed: false, searched: false });
+  });
+
+  it('lets the proposer keep reading their own activity, without naming a host they are blocked with', async () => {
+    const id = await hosted();
+    await blockUser(ports, { actorId: DEMO_USERS.marc, targetId: DEMO_USERS.lea });
+    const detail = await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id });
+    expect(detail?.signal).toMatchObject({ id, hostless: false, host: null });
+    expect(detail).toMatchObject({ isHost: false, hostPowers: [] });
+    // And nobody can join across that block.
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId: id })).toMatchObject({ ok: true });
   });
 });
 

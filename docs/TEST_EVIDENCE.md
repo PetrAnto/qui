@@ -21,12 +21,12 @@ activity proposals, ADR-0017 / `INV-HOST-3`; same command).
 
 ```
 Test Files  26 passed (26)
-     Tests  402 passed (402)
+     Tests  409 passed (409)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 54 |
+| core | `test/safety-invariants.test.ts` | 56 |
 | core | `test/activity.test.ts` | 45 |
 | core | `test/search-input.test.ts` | 9 |
 | core | `test/capabilities.test.ts` | 10 |
@@ -37,7 +37,7 @@ Test Files  26 passed (26)
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
 | db | `test/proposals.test.ts` | 18 |
-| db | `test/host-designation.test.ts` | 23 |
+| db | `test/host-designation.test.ts` | 28 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -60,14 +60,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **54
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **56
 tests** in `safety-invariants.test.ts` cover the 22 invariants listed in [SAFETY.md](SAFETY.md):
 `INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`, `INV-HOST-3`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
 `INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`, `INV-PROPOSAL-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 54.
+`analytics.test.ts`, so the gate reports more than 56.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 

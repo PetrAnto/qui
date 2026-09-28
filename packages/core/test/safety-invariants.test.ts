@@ -186,6 +186,25 @@ describe('INV-BLOCK-1 a block removes the account in both directions', () => {
     );
     expect(ranked.map((entry) => entry.post.id)).toEqual(['p2']);
   });
+
+  it('hides a hosted proposal from somebody blocked with its designated host, either direction (ADR-0017)', () => {
+    const proposer = actor('proposer');
+    const host = actor('host');
+    const viewer = actor('viewer');
+    const hosted = signal('s-h', proposer.id, 'join', { hostId: host.id });
+    for (const [blockerId, blockedId] of [
+      [viewer.id, host.id],
+      [host.id, viewer.id],
+    ] as const) {
+      const graph = createSafetyGraph([{ id: 'b', blockerId, blockedId, createdAt: T0 }]);
+      expect(canReadSignal(viewer, hosted, proposer, graph, host).reason).toBe('blocked');
+      expect(canViewSignal(viewer, hosted, proposer, graph, host).reason).toBe('blocked');
+    }
+    const clear = createSafetyGraph([]);
+    expect(canReadSignal(viewer, hosted, proposer, clear, host)).toEqual({ allowed: true });
+    // A caller that omits the designated host is refused, never checked against the proposer alone.
+    expect(canReadSignal(viewer, hosted, proposer, clear).reason).toBe('not_host');
+  });
 });
 
 describe('INV-DM-1 no unsolicited direct messages', () => {
@@ -727,6 +746,21 @@ describe('INV-SUSPEND-1 suspended and restricted accounts respect policy', () =>
     expect(canRespondToSignal(suspended, signal('s1', 'host'), host, graph, NOW).reason).toBe(
       'account_suspended',
     );
+  });
+
+  it('applies suspension and restriction to the designated host of a proposal too (ADR-0017)', () => {
+    const proposer = actor('proposer');
+    const viewer = actor('viewer');
+    const graph = createSafetyGraph([]);
+    const suspended = actor('host', { accountState: 'suspended' });
+    const hosted = signal('s-h', proposer.id, 'join', { hostId: suspended.id });
+    expect(canReadSignal(viewer, hosted, proposer, graph, suspended).reason).toBe('author_suspended');
+    const restricted = actor('host', { accountState: 'distribution_restricted' });
+    expect(canReadSignal(viewer, hosted, proposer, graph, restricted)).toEqual({ allowed: true });
+    expect(canViewSignal(viewer, hosted, proposer, graph, restricted).reason).toBe('distribution_restricted');
+    // The proposer and the host themselves keep their own view.
+    expect(canViewSignal(proposer, hosted, proposer, graph, restricted)).toEqual({ allowed: true });
+    expect(canViewSignal(restricted, hosted, proposer, graph, restricted)).toEqual({ allowed: true });
   });
 });
 
