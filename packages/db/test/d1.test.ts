@@ -269,6 +269,17 @@ describe('activity proposals (ADR-0016)', () => {
     await expect(d1.insertSignal({ ...existing, id: 'sig-p-refused', hostId: null })).rejects.toThrow(/ADR-0016/);
   });
 
+  it('holds no host offers and refuses to designate a host (no proposals persist here)', async () => {
+    const [existing] = await d1.listSignals();
+    if (existing === undefined) throw new Error('no seeded signal');
+    expect(await d1.listHostOffers(existing.id)).toEqual([]);
+    await expect(
+      d1.putHostOffer({ signalId: existing.id, volunteerId: 'usr-x', state: 'pending', createdAt: existing.createdAt }),
+    ).rejects.toThrow(/ADR-0016/);
+    await expect(d1.assignSignalHost(existing.id, 'usr-x')).rejects.toThrow(/ADR-0016/);
+    expect((await d1.getSignal(existing.id))?.hostId).toBe(existing.creatorId);
+  });
+
   it('creates a hosted signal only if absent, like the in-memory store', async () => {
     const [existing] = await d1.listSignals();
     if (existing === undefined) throw new Error('no seeded signal');

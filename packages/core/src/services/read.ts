@@ -4,8 +4,9 @@ import { canDiscoverUser, canViewPost, canViewProfile,
   canViewSignal,
 } from '../policy/access';
 import { canPublishInGeo, toActorView } from '../policy/capabilities';
-import type { ActorView, Decision } from '../policy/decision';
+import { deny, type ActorView, type Decision } from '../policy/decision';
 import type { SafetyGraph } from '../policy/graph';
+import { canVolunteerToHost } from '../policy/hosting';
 import {
   canContact,
   canExerciseHostPower,
@@ -26,7 +27,7 @@ import {
 } from '../projections';
 import { rankDiscover, type RankCandidate } from '../ranking';
 import type { Ports } from '../repository';
-import type { GeoScope, GeoScopeId, Person, SignalType, ThreadId, UserId } from '../types';
+import type { GeoScope, GeoScopeId, HostOffer, Person, Signal, SignalType, ThreadId, UserId } from '../types';
 import { loadActor, loadSafetyGraph } from './context';
 
 interface ReadContext {
@@ -271,6 +272,7 @@ export async function getProfile(
       person,
       cityName(context, signal.geoScopeId),
       participants.filter((entry) => entry.signalId === signal.id && entry.state === 'joined').length,
+      hostPersonOf(context, signal),
     ),
   );
 
@@ -278,9 +280,13 @@ export async function getProfile(
   const openThread = threads.find(
     (thread) => thread.state === 'open' && thread.participantIds.includes(person.id),
   );
+  // Only a signal this person hosts gives a reason to contact them. Having
+  // proposed an activity somebody else hosts does not (ADR-0016): authorship
+  // opens no messaging path to the proposer.
   const respondable =
     openSignals.find(
       (signal) =>
+        signal.hostId === person.id &&
         canRespondToSignal(context.viewer, signal, subject, context.graph, context.now).allowed,
     ) ?? null;
 
@@ -360,8 +366,16 @@ export async function listSignals(
         creator,
         cityName(context, signal.geoScopeId),
         participants.filter((entry) => entry.signalId === signal.id && entry.state === 'joined').length,
+        hostPersonOf(context, signal),
       ),
-      eligibility: canRespondToSignal(context.viewer, signal, creatorView, context.graph, context.now),
+      eligibility: canRespondToSignal(
+        context.viewer,
+        signal,
+        creatorView,
+        context.graph,
+        context.now,
+        hostViewOf(context, signal),
+      ),
       isHost: signal.hostId === input.viewerId,
       opensPrivateThread: opensPrivateThread(signal.type),
     });
@@ -381,6 +395,23 @@ export interface SignalDetail extends SignalCard {
   readonly hostPowers: readonly string[];
   readonly viewerResponded: boolean;
   readonly viewerJoined: boolean;
+  /** The viewer published this proposal. Authorship grants no host power. */
+  readonly isProposer: boolean;
+  /** Pending offers to host, shown only to the proposer of a hostless proposal. */
+  readonly hostOffers: readonly { readonly volunteer: PublicAuthor; readonly since: string }[];
+  readonly viewerOffered: boolean;
+  /** Whether the viewer may offer to host this proposal right now. */
+  readonly canVolunteer: Decision;
+}
+
+/** The designated host as a person, or null for a hostless proposal. */
+function hostPersonOf(context: ReadContext, signal: Signal): Person | null {
+  return signal.hostId === null ? null : (context.people.get(signal.hostId) ?? null);
+}
+
+/** The designated host as policy sees them, or null for a hostless proposal. */
+function hostViewOf(context: ReadContext, signal: Signal): ActorView | null {
+  return signal.hostId === null ? null : (context.actors.get(signal.hostId) ?? null);
 }
 
 export async function getSignalDetail(
@@ -412,9 +443,49 @@ export async function getSignalDetail(
     context.graph,
   );
 
+  // Host offers are private to the volunteer and the proposer (INV-HOST-3):
+  // the proposer sees every pending offer they could confirm, a volunteer
+  // sees only whether they offered, and everybody else sees nothing.
+  const isProposer = signal.creatorId === input.viewerId;
+  const offers = signal.plan === null ? [] : await ports.repo.listHostOffers(signal.id);
+  const hostOffers =
+    isProposer && signal.hostId === null
+      ? offers
+          .filter((offer) => offer.state === 'pending')
+          .map((offer) => ({ offer, volunteer: context.actors.get(offer.volunteerId), person: context.people.get(offer.volunteerId) }))
+          .filter(
+            (entry): entry is { offer: HostOffer; volunteer: ActorView; person: Person } =>
+              entry.volunteer !== undefined &&
+              entry.person !== undefined &&
+              canViewProfile(context.viewer, entry.volunteer, context.graph).allowed,
+          )
+          .map((entry) => ({ volunteer: toPublicAuthor(entry.person), since: entry.offer.createdAt }))
+      : [];
+  const viewerEvidence = await ports.repo.evidenceFor(input.viewerId);
+
   return {
-    signal: toPublicSignal(signal, creator, cityName(context, signal.geoScopeId), joined.length),
-    eligibility: canRespondToSignal(context.viewer, signal, creatorView, context.graph, context.now),
+    signal: toPublicSignal(
+      signal,
+      creator,
+      cityName(context, signal.geoScopeId),
+      joined.length,
+      hostPersonOf(context, signal),
+    ),
+    eligibility: canRespondToSignal(
+      context.viewer,
+      signal,
+      creatorView,
+      context.graph,
+      context.now,
+      hostViewOf(context, signal),
+    ),
+    isProposer,
+    hostOffers,
+    viewerOffered: offers.some((offer) => offer.volunteerId === input.viewerId && offer.state === 'pending'),
+    canVolunteer:
+      signal.plan === null
+        ? deny('wrong_signal_type')
+        : canVolunteerToHost(context.viewer, signal, creatorView, viewerEvidence, context.graph, context.now),
     isHost,
     opensPrivateThread: opensPrivateThread(signal.type),
     participants: visibleIds

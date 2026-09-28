@@ -5,6 +5,7 @@ import { getSignalDetail } from '@indenoi/core';
 
 import { Avatar } from '../../../components/Avatar';
 import { HostControls } from '../../../components/HostControls';
+import { ConfirmHost, VolunteerToHost } from '../../../components/HostDesignation';
 import { SafetyMenu } from '../../../components/SafetyMenu';
 import { SignalActions } from '../../../components/SignalActions';
 import { formatInterval } from '@indenoi/core';
@@ -26,6 +27,9 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
 
   const now = store.now();
   const { signal } = detail;
+  // A proposal whose host is somebody other than its proposer (ADR-0016).
+  const designatedHost =
+    signal.plan !== null && signal.host !== null && signal.host.id !== signal.creator.id ? signal.host : null;
 
   return (
     <>
@@ -33,6 +37,7 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
         <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
         {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
+        {designatedHost !== null ? <span className="chip chip--context">Proposal · hosted</span> : null}
         <span className="chip chip--demo">demo</span>
       </div>
 
@@ -91,15 +96,49 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
         <Avatar media={signal.creator.avatar} displayName={signal.creator.displayName} />
         <div>
           <div style={{ fontWeight: 650 }}>{signal.creator.displayName}</div>
-          <div className="faint">@{signal.creator.handle}</div>
+          <div className="faint">
+            @{signal.creator.handle}
+            {signal.plan !== null ? ' · proposed this' : ''}
+          </div>
         </div>
       </Link>
 
-      {signal.hostless && signal.creator.id === viewerId ? (
+      {designatedHost !== null ? (
+        <section className="card card--pad stack stack--tight" aria-labelledby="host-title">
+          <h2 id="host-title">Hosted by {designatedHost.displayName}</h2>
+          <Link className="row" href={`/p/${designatedHost.handle}`}>
+            <Avatar media={designatedHost.avatar} displayName={designatedHost.displayName} />
+            <div>
+              <div style={{ fontWeight: 650 }}>{designatedHost.displayName}</div>
+              <div className="faint">@{designatedHost.handle} · host</div>
+            </div>
+          </Link>
+        </section>
+      ) : null}
+
+      {signal.hostless && detail.isProposer ? (
+        <>
+          <p className="notice">
+            Your proposal. It has no host yet: nobody can join or answer it, and proposing it gave you
+            no host role. Someone with a local tie to {signal.cityName} can offer to host; you decide
+            whether to confirm them.
+          </p>
+          <ConfirmHost signalId={signal.id} offers={detail.hostOffers} />
+        </>
+      ) : signal.hostless && detail.viewerOffered ? (
         <p className="notice">
-          Your proposal. It has no host yet: nobody can join or answer it, and proposing it gave you
-          no host role.
+          You offered to host this. {signal.creator.displayName} decides whether to confirm you; until a
+          host is confirmed, nobody can join.
         </p>
+      ) : signal.hostless ? (
+        <>
+          <p className="notice notice--warn">{explain(detail.eligibility.reason ?? 'awaiting_host')}</p>
+          {detail.canVolunteer.allowed ? (
+            <VolunteerToHost signalId={signal.id} />
+          ) : (
+            <p className="faint">You cannot offer to host it: {explain(detail.canVolunteer.reason)}</p>
+          )}
+        </>
       ) : detail.isHost ? (
         <HostControls
           signalId={signal.id}
@@ -107,6 +146,10 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
           participants={detail.participants}
           canClose={detail.hostPowers.includes('close_participation')}
         />
+      ) : detail.isProposer && designatedHost !== null ? (
+        <p className="notice">
+          You proposed this. {designatedHost.displayName} hosts it and holds the host controls.
+        </p>
       ) : detail.eligibility.allowed ? (
         <SignalActions
           signalId={signal.id}
@@ -135,7 +178,7 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
       <SafetyMenu
         targetType="signal"
         targetId={signal.id}
-        personId={detail.isHost || signal.creator.id === viewerId ? undefined : signal.creator.id}
+        personId={signal.creator.id === viewerId ? undefined : signal.creator.id}
         personName={signal.creator.displayName}
       />
     </>

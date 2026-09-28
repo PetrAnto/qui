@@ -44,14 +44,25 @@ export function canRespondToSignal(
   creator: ActorView,
   graph: SafetyGraph,
   now: Instant,
+  /** The designated host, when it is not the creator (a hosted proposal, ADR-0016). */
+  host: ActorView | null = null,
 ): Decision {
   if (responder.id === creator.id) return deny('self');
   // INV-PROPOSAL-1: a hostless proposal has nobody to accept a response or to
   // be responsible for a gathering, so it can be neither answered nor joined.
   // This is also what keeps every unapproved group/age rule out of reach.
   if (signal.hostId === null) return deny('awaiting_host');
+  // The person responsible for the gathering. Callers must supply them when
+  // they are not the creator; a call that does not is refused rather than
+  // checked against the wrong person.
+  const designated = signal.hostId === creator.id ? creator : host;
+  if (designated === null || designated.id !== signal.hostId) return deny('not_host');
+  if (responder.id === designated.id) return deny('self');
+  // A block with either the proposer or the host keeps the person out.
   if (graph.isBlockedBetween(responder.id, creator.id)) return deny('blocked');
+  if (graph.isBlockedBetween(responder.id, designated.id)) return deny('blocked');
   if (creator.accountState === 'suspended') return deny('author_suspended');
+  if (designated.accountState === 'suspended') return deny('author_suspended');
   // INV-HOST-1: exclusion from a hosted object is permanent for that object.
   if (graph.isHostExcluded(signal.id, responder.id)) return deny('host_excluded');
   if (!isLive(signal, now)) return deny('signal_not_open');
@@ -78,9 +89,10 @@ export function canJoinEvent(
   graph: SafetyGraph,
   joinedCount: number,
   now: Instant,
+  host: ActorView | null = null,
 ): Decision {
   if (!GROUP_TYPES.has(signal.type)) return deny('wrong_signal_type');
-  const eligible = canRespondToSignal(joiner, signal, creator, graph, now);
+  const eligible = canRespondToSignal(joiner, signal, creator, graph, now, host);
   if (!eligible.allowed) return eligible;
   if (signal.capacity !== null && joinedCount >= signal.capacity) return deny('signal_full');
   return ALLOW;

@@ -44,8 +44,10 @@ only to that object's **designated host**.
   host approval path.
 
 The approved P1 target allows an eligible host to be designated and confirmed
-by the proposer. **Designating a host is not implemented** in this slice; until
-it is, a proposal stays hostless.
+by the proposer. This slice did not implement designation; a proposal stayed
+hostless until then. *Implemented since by
+[ADR-0017](0017-host-designation-for-proposals.md) (`INV-HOST-3`), within P1 as
+approved here.*
 
 ### 2. Who may propose (P5)
 

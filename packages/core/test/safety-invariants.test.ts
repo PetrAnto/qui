@@ -24,7 +24,8 @@ import {
   canSendMessage,
   visibleParticipants,
 } from '../src/policy/interaction';
-import { canProposeActivity, EMPTY_EVIDENCE } from '../src/policy/capabilities';
+import { canProposeActivity, deriveCapabilities, EMPTY_EVIDENCE } from '../src/policy/capabilities';
+import { canConfirmHost, canVolunteerToHost } from '../src/policy/hosting';
 import { acceptAttestation } from '../src/identity/intake';
 import { toPublicPost, toPublicProfile, toPublicSignal } from '../src/projections';
 import { rankDiscover } from '../src/ranking';
@@ -331,6 +332,113 @@ describe('INV-PROPOSAL-1 a hostless proposal cannot be joined, answered or used 
   });
 });
 
+describe('INV-HOST-3 a proposal gets a host only by volunteer consent plus proposer confirmation', () => {
+  const CITY = 'geo:city:test';
+  const HOSTING = ['publish', 'publish_local', 'respond_to_unknown_people', 'host'] as const;
+  const local = {
+    ...EMPTY_EVIDENCE,
+    attachments: [{ userId: 'v', geoScopeId: CITY, kind: 'resident' as const, evidence: 'declared' as const, since: T0 }],
+  };
+  const exploringOnly = {
+    ...EMPTY_EVIDENCE,
+    attachments: [{ userId: 'v', geoScopeId: CITY, kind: 'exploring' as const, evidence: 'declared' as const, since: T0 }],
+  };
+  const proposer = actor('proposer');
+  const volunteer = actor('v', { capabilities: HOSTING });
+  const plan = {
+    practiceLabel: 'Paddle',
+    timezone: 'Europe/Paris',
+    windows: [{ start: '2026-03-04T09:00:00.000Z', end: '2026-03-04T12:00:00.000Z', preferred: false }],
+    durationMinutes: 60,
+    level: null,
+    freeOnly: null,
+    proposalKey: 'k',
+  };
+  const proposal = signal('s-p', proposer.id, 'join', { hostId: null, plan, expiresAt: '2026-03-04T12:00:00.000Z' });
+  const offer = { signalId: proposal.id, volunteerId: volunteer.id, state: 'pending' as const, createdAt: T0 };
+  const graph = createSafetyGraph([]);
+
+  it('lets an adult host with a local tie to the city volunteer, and nobody else', () => {
+    expect(canVolunteerToHost(volunteer, proposal, proposer, local, graph, NOW)).toEqual({ allowed: true });
+    // Hosting stays adults-only with a local tie: a minor never derives `host`.
+    const minorCaps = deriveCapabilities(person('m', { ageBand: 'minor_15_17' }), local);
+    expect(minorCaps.has('host')).toBe(false);
+    expect(canVolunteerToHost(actor('m', { ageBand: 'minor_15_17' }), proposal, proposer, local, graph, NOW).allowed).toBe(
+      false,
+    );
+    expect(canVolunteerToHost(volunteer, proposal, proposer, exploringOnly, graph, NOW).reason).toBe(
+      'no_local_attachment',
+    );
+    expect(canVolunteerToHost(volunteer, proposal, proposer, EMPTY_EVIDENCE, graph, NOW).reason).toBe(
+      'no_local_attachment',
+    );
+    expect(canVolunteerToHost(proposer, proposal, proposer, local, graph, NOW).reason).toBe('self');
+  });
+
+  it('never lets either person appoint a host alone', () => {
+    // No offer: the proposer cannot name anybody.
+    expect(canConfirmHost(proposer, proposal, volunteer, local, null, graph, NOW).reason).toBe('no_host_offer');
+    // Somebody else's offer does not count for this volunteer.
+    const other = { ...offer, volunteerId: 'someone-else' };
+    expect(canConfirmHost(proposer, proposal, volunteer, local, other, graph, NOW).reason).toBe('no_host_offer');
+    // Only the proposer confirms: never the volunteer, never a third party.
+    expect(canConfirmHost(volunteer, proposal, volunteer, local, offer, graph, NOW).reason).toBe('not_proposer');
+    expect(canConfirmHost(actor('x'), proposal, volunteer, local, offer, graph, NOW).reason).toBe('not_proposer');
+    expect(canConfirmHost(proposer, proposal, volunteer, local, offer, graph, NOW)).toEqual({ allowed: true });
+  });
+
+  it('revalidates everything at confirmation', () => {
+    const blocked = createSafetyGraph([{ id: 'b', blockerId: volunteer.id, blockedId: proposer.id, createdAt: T0 }]);
+    expect(canConfirmHost(proposer, proposal, volunteer, local, offer, blocked, NOW).reason).toBe('blocked');
+    const suspendedVolunteer = actor('v', { capabilities: HOSTING, accountState: 'suspended' });
+    expect(canConfirmHost(proposer, proposal, suspendedVolunteer, local, offer, graph, NOW).allowed).toBe(false);
+    const suspendedProposer = actor('proposer', { accountState: 'suspended' });
+    expect(canConfirmHost(suspendedProposer, proposal, volunteer, local, offer, graph, NOW).allowed).toBe(false);
+    expect(canConfirmHost(proposer, proposal, volunteer, EMPTY_EVIDENCE, offer, graph, NOW).reason).toBe(
+      'no_local_attachment',
+    );
+    expect(canConfirmHost(proposer, { ...proposal, state: 'closed' }, volunteer, local, offer, graph, NOW).reason).toBe(
+      'signal_not_open',
+    );
+    expect(canConfirmHost(proposer, proposal, volunteer, local, offer, graph, '2026-03-05T00:00:00.000Z').reason).toBe(
+      'signal_not_open',
+    );
+    expect(canConfirmHost(proposer, { ...proposal, state: 'removed' }, volunteer, local, offer, graph, NOW).allowed).toBe(
+      false,
+    );
+    expect(
+      canConfirmHost(proposer, proposal, volunteer, local, { ...offer, state: 'accepted' }, graph, NOW).reason,
+    ).toBe('no_host_offer');
+  });
+
+  it('refuses a proposal that already has a host, and every signal that is not a proposal', () => {
+    const hostedProposal = { ...proposal, hostId: 'someone' };
+    expect(canConfirmHost(proposer, hostedProposal, volunteer, local, offer, graph, NOW).reason).toBe('already_hosted');
+    const ordinary = signal('s-o', proposer.id, 'join');
+    expect(canVolunteerToHost(volunteer, ordinary, proposer, local, graph, NOW).reason).toBe('wrong_signal_type');
+  });
+
+  it('then applies joining rules against both the proposer and the designated host', () => {
+    const host = volunteer;
+    const hostedProposal = { ...proposal, hostId: host.id };
+    const joiner = actor('j');
+    expect(canJoinEvent(joiner, hostedProposal, proposer, graph, 0, NOW, host)).toEqual({ allowed: true });
+    // A caller that forgets the designated host is refused, never checked against the proposer.
+    expect(canJoinEvent(joiner, hostedProposal, proposer, graph, 0, NOW).reason).toBe('not_host');
+    const withHost = createSafetyGraph([{ id: 'b', blockerId: host.id, blockedId: joiner.id, createdAt: T0 }]);
+    expect(canJoinEvent(joiner, hostedProposal, proposer, withHost, 0, NOW, host).reason).toBe('blocked');
+    const withProposer = createSafetyGraph([{ id: 'b', blockerId: joiner.id, blockedId: proposer.id, createdAt: T0 }]);
+    expect(canJoinEvent(joiner, hostedProposal, proposer, withProposer, 0, NOW, host).reason).toBe('blocked');
+    expect(canJoinEvent(proposer, hostedProposal, proposer, graph, 0, NOW, host).reason).toBe('self');
+    expect(canJoinEvent(host, hostedProposal, proposer, graph, 0, NOW, host).reason).toBe('self');
+    // Host power belongs to the designated host only.
+    for (const power of ['accept_response', 'remove_participant', 'exclude_participant', 'close_participation'] as const) {
+      expect(canExerciseHostPower(proposer, hostedProposal, power).reason).toBe('not_host');
+      expect(canExerciseHostPower(host, hostedProposal, power)).toEqual({ allowed: true });
+    }
+  });
+});
+
 describe('INV-MOD-1 moderation material is private', () => {
   const report = {
     id: 'r1',
@@ -496,7 +604,7 @@ describe('INV-GEO-1 no person-level location ever leaves the domain', () => {
   it('exposes no coordinate on public content or signals', () => {
     expect(scanKeys(toPublicPost(post('p1', 'u1'), person('u1'), 'Testville', 0, false))).toEqual([]);
     expect(
-      scanKeys(toPublicSignal(signal('s1', 'u1', 'event', { placeLabel: 'Place Foch' }), person('u1'), 'Testville', 0)),
+      scanKeys(toPublicSignal(signal('s1', 'u1', 'event', { placeLabel: 'Place Foch' }), person('u1'), 'Testville', 0, person('u1'))),
     ).toEqual([]);
   });
 });

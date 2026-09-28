@@ -11,3 +11,4 @@ export * from './age';
 export * from './capabilities';
 export * from './access';
 export * from './interaction';
+export * from './hosting';

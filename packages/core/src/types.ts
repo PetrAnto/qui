@@ -311,6 +311,19 @@ export interface Participant {
  * A host decision scoped to one hosted object. It never becomes a
  * platform-wide power (ADR-0010).
  */
+/**
+ * A person's explicit offer to host an activity proposal (ADR-0016, P1).
+ * Consent comes from the volunteer; designation needs the proposer's
+ * confirmation on top of it (INV-HOST-3). Offers are visible only to the
+ * volunteer and the proposer.
+ */
+export interface HostOffer {
+  readonly signalId: SignalId;
+  readonly volunteerId: UserId;
+  readonly state: 'pending' | 'accepted';
+  readonly createdAt: Instant;
+}
+
 export interface HostExclusion {
   readonly signalId: SignalId;
   readonly userId: UserId;

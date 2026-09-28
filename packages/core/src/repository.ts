@@ -10,6 +10,7 @@ import type {
   GeoScope,
   GeoScopeId,
   HostExclusion,
+  HostOffer,
   Instant,
   Message,
   ModerationAction,
@@ -76,6 +77,15 @@ export interface Repository {
    * id itself carries idempotency (activity proposals, ADR-0016).
    */
   insertSignal(signal: Signal): Promise<boolean>;
+  /**
+   * Compare-and-set: designates `hostId` only if the signal exists and has no
+   * host yet, and reports whether it did. Two concurrent confirmations can
+   * never install different hosts (INV-HOST-3).
+   */
+  assignSignalHost(signalId: SignalId, hostId: UserId): Promise<boolean>;
+  listHostOffers(signalId: SignalId): Promise<readonly HostOffer[]>;
+  /** Upserts on (signalId, volunteerId). */
+  putHostOffer(offer: HostOffer): Promise<void>;
   listResponses(filter?: { readonly signalId?: SignalId }): Promise<readonly SignalResponse[]>;
   getResponse(id: string): Promise<SignalResponse | null>;
   putResponse(response: SignalResponse): Promise<void>;

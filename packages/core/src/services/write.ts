@@ -369,6 +369,23 @@ export async function createSignal(
   return ok({ signalId: id });
 }
 
+/**
+ * The designated host of a signal as a loaded actor: the creator for every
+ * signal created as before, a separately designated person for a hosted
+ * proposal (ADR-0016), null for a hostless one. Eligibility checks receive it
+ * explicitly, so a block with — or the suspension of — the person responsible
+ * for the gathering is never overlooked.
+ */
+async function loadHost(
+  ports: Ports,
+  signal: { readonly hostId: UserId | null; readonly creatorId: UserId },
+  creator: Awaited<ReturnType<typeof loadActor>>,
+): Promise<Awaited<ReturnType<typeof loadActor>>> {
+  if (signal.hostId === null) return null;
+  if (creator !== null && signal.hostId === creator.person.id) return creator;
+  return loadActor(ports, signal.hostId);
+}
+
 export async function respondToSignal(
   ports: Ports,
   input: { actorId: UserId; signalId: SignalId; message: string },
@@ -381,8 +398,9 @@ export async function respondToSignal(
   if (actor === null || signal === null) return fail('not_found');
   const creator = await loadActor(ports, signal.creatorId);
   if (creator === null) return fail('not_found');
+  const host = await loadHost(ports, signal, creator);
 
-  const decision = canRespondToSignal(actor.view, signal, creator.view, graph, ports.now());
+  const decision = canRespondToSignal(actor.view, signal, creator.view, graph, ports.now(), host?.view ?? null);
   if (!decision.allowed) return fail(decision.reason);
 
   const responseId = ports.newId('resp');
@@ -417,6 +435,7 @@ export async function joinSignal(
   if (actor === null || signal === null) return fail('not_found');
   const creator = await loadActor(ports, signal.creatorId);
   if (creator === null) return fail('not_found');
+  const host = await loadHost(ports, signal, creator);
 
   const participants = await ports.repo.listParticipants(signal.id);
   const alreadyJoined = participants.some(
@@ -429,7 +448,7 @@ export async function joinSignal(
   const othersJoined = participants.filter(
     (entry) => entry.state === 'joined' && entry.userId !== input.actorId,
   ).length;
-  const decision = canJoinEvent(actor.view, signal, creator.view, graph, othersJoined, ports.now());
+  const decision = canJoinEvent(actor.view, signal, creator.view, graph, othersJoined, ports.now(), host?.view ?? null);
   if (!decision.allowed) return fail(decision.reason);
   // Joining twice is not joining again: no second row, no second event.
   if (alreadyJoined) return ok({ signalId: signal.id });
@@ -482,6 +501,10 @@ export async function decideResponse(
 
   const responder = await loadActor(ports, response.responderId);
   if (responder === null) return fail('not_found');
+  // The host exercising the power is the designated host (checked above); the
+  // creator may be somebody else — the proposer of a hosted proposal.
+  const creator = signal.creatorId === host.person.id ? host : await loadActor(ports, signal.creatorId);
+  if (creator === null) return fail('not_found');
 
   // A withdrawn response is no longer anybody's request, and an accepted one
   // has already produced a participant or a thread that a later "decline"
@@ -515,7 +538,7 @@ export async function decideResponse(
     const othersJoined = participants.filter(
       (entry) => entry.state === 'joined' && entry.userId !== responder.person.id,
     ).length;
-    const eligible = canJoinEvent(responder.view, signal, host.view, graph, othersJoined, ports.now());
+    const eligible = canJoinEvent(responder.view, signal, creator.view, graph, othersJoined, ports.now(), host.view);
     if (!eligible.allowed) return fail(eligible.reason);
 
     // Repeating the decision already recorded is a no-op, not a second effect.
@@ -546,7 +569,7 @@ export async function decideResponse(
   // keeps the age-band rule). A repeat is revalidated the same way before it
   // reports success; the conversation it already opened is left as it is.
   const allowed = all(
-    canRespondToSignal(responder.view, signal, host.view, graph, ports.now()),
+    canRespondToSignal(responder.view, signal, creator.view, graph, ports.now(), host.view),
     canOpenScopedThread(
       host.view,
       responder.view,

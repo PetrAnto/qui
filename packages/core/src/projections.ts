@@ -83,6 +83,8 @@ export interface PublicSignal {
   readonly cityName: string;
   readonly linkedPostId: string | null;
   readonly creator: PublicAuthor;
+  /** The designated host; the creator for every signal created as before. */
+  readonly host: PublicAuthor | null;
   /** True for an activity proposal: nobody hosts it yet (ADR-0016). */
   readonly hostless: boolean;
   /** What a proposal says; everything but its private idempotency key. */
@@ -168,6 +170,8 @@ export function toPublicSignal(
   creator: Person,
   cityName: string,
   joinedCount: number,
+  /** The designated host, or null for a hostless proposal. */
+  host: Person | null,
 ): PublicSignal {
   return {
     id: signal.id,
@@ -185,6 +189,7 @@ export function toPublicSignal(
     cityName,
     linkedPostId: signal.linkedPostId,
     creator: toPublicAuthor(creator),
+    host: host === null ? null : toPublicAuthor(host),
     hostless: signal.hostId === null,
     plan:
       signal.plan === null
