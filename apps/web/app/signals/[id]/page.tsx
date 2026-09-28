@@ -146,18 +146,22 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
           participants={detail.participants}
           canClose={detail.hostPowers.includes('close_participation')}
         />
-      ) : detail.isProposer && designatedHost !== null ? (
-        <p className="notice">
-          You proposed this. {designatedHost.displayName} hosts it and holds the host controls.
-        </p>
       ) : detail.eligibility.allowed ? (
-        <SignalActions
-          signalId={signal.id}
-          opensPrivateThread={detail.opensPrivateThread}
-          alreadyResponded={detail.viewerResponded}
-          alreadyJoined={detail.viewerJoined}
-          verb={SIGNAL_VERBS[signal.type]}
-        />
+        <>
+          {detail.isProposer && designatedHost !== null ? (
+            <p className="notice">
+              You proposed this. {designatedHost.displayName} hosts it and holds the host controls. You
+              are not on the list unless you join.
+            </p>
+          ) : null}
+          <SignalActions
+            signalId={signal.id}
+            opensPrivateThread={detail.opensPrivateThread}
+            alreadyResponded={detail.viewerResponded}
+            alreadyJoined={detail.viewerJoined}
+            verb={SIGNAL_VERBS[signal.type]}
+          />
+        </>
       ) : (
         <p className="notice notice--warn">{explain(detail.eligibility.reason)}</p>
       )}

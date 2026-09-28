@@ -85,6 +85,44 @@ test('a volunteer offers, the proposer confirms, the host is shown, and an eligi
   await expect(page.getByRole('button', { name: 'Close it to new people' })).toHaveCount(0);
 });
 
+test('once Léa hosts, Marc can join his own proposal explicitly, once, with no host controls', async ({ page }) => {
+  const url = await proposeAsMarc(page);
+  await become(page, /Léa/);
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Offer to host' }).click();
+  await expect(page.getByText(/You offered to host this/)).toBeVisible();
+
+  await become(page, /Marc/);
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Confirm Léa as host' }).click();
+  await expect(page.getByRole('heading', { name: 'Hosted by Léa' })).toBeVisible();
+  // Confirming joined nobody: Marc is offered the ordinary action, not put on the list.
+  await expect(page.getByText(/You are not on the list unless you join/)).toBeVisible();
+
+  const joins = { count: 0 };
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === `/api${url}/join`) joins.count += 1;
+  });
+  await page.getByRole('button', { name: 'Ask to join' }).click();
+  await expect(page.getByRole('button', { name: 'You are on the list' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'You are on the list' })).toBeDisabled();
+  expect(joins.count).toBe(1);
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Close it to new people' })).toHaveCount(0);
+
+  // After a reload, still joined once and still no host controls.
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'You are on the list' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Who is coming' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Marc', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+
+  // Léa, the host, sees Marc on her list.
+  await become(page, /Léa/);
+  await page.goto(url);
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(1);
+});
+
 test('people who cannot host are told why, and cannot offer', async ({ page }) => {
   const url = await proposeAsMarc(page);
 

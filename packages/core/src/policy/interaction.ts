@@ -47,7 +47,13 @@ export function canRespondToSignal(
   /** The designated host, when it is not the creator (a hosted proposal, ADR-0016). */
   host: ActorView | null = null,
 ): Decision {
-  if (responder.id === creator.id) return deny('self');
+  // Nobody takes part in a gathering they are responsible for. The creator is
+  // that person for every signal they host, and a hostless proposal is not
+  // joinable at all. Once somebody else is the designated host (ADR-0017), the
+  // proposer is an ordinary participant: they may join explicitly, under every
+  // check below, and are never joined automatically.
+  const hostedByAnother = signal.hostId !== null && signal.hostId !== creator.id;
+  if (responder.id === creator.id && !hostedByAnother) return deny('self');
   // INV-PROPOSAL-1: a hostless proposal has nobody to accept a response or to
   // be responsible for a gathering, so it can be neither answered nor joined.
   // This is also what keeps every unapproved group/age rule out of reach.

@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  activeParticipants,
   addCity,
   blockUser,
   closeSignal,
   confirmHost,
   createSignal,
   decideResponse,
+  describeSignal,
   getProfile,
   getSignalDetail,
   joinSignal,
@@ -136,7 +138,6 @@ describe('the journey: volunteer, proposer confirms, eligible people join', () =
     const asProposer = await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id });
     // Who is coming stays visible, as on every hosted signal; the controls do not.
     expect(asProposer).toMatchObject({ isHost: false, isProposer: true, hostPowers: [], responses: [] });
-    expect(asProposer?.eligibility).toEqual({ allowed: false, reason: 'self' });
     expect(
       await removeParticipant(ports, { hostId: DEMO_USERS.marc, signalId: id, userId: DEMO_USERS.hugo, exclude: true }),
     ).toEqual({ ok: false, reason: 'not_host' });
@@ -145,7 +146,6 @@ describe('the journey: volunteer, proposer confirms, eligible people join', () =
       reason: 'not_host',
     });
     expect((await recordLocalOutcome(ports, { actorId: DEMO_USERS.marc, signalId: id })).ok).toBe(false);
-    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({ ok: false, reason: 'self' });
 
     const asHost = await getSignalDetail(ports, { viewerId: DEMO_USERS.lea, signalId: id });
     expect(asHost).toMatchObject({ isHost: true, isProposer: false });
@@ -153,6 +153,102 @@ describe('the journey: volunteer, proposer confirms, eligible people join', () =
     expect(asHost?.participants.map((person) => person.id)).toEqual([DEMO_USERS.hugo]);
     expect(await joinSignal(ports, { actorId: DEMO_USERS.lea, signalId: id })).toEqual({ ok: false, reason: 'self' });
     expect(await closeSignal(ports, { hostId: DEMO_USERS.lea, signalId: id })).toMatchObject({ ok: true });
+  });
+
+  it('lets the proposer join explicitly, once, as an ordinary participant with no host power', async () => {
+    const id = await hosted();
+    // Designation joined nobody, the proposer included.
+    expect(await ports.repo.listParticipants(id)).toEqual([]);
+    const before = await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id });
+    expect(before).toMatchObject({ isProposer: true, isHost: false, viewerJoined: false });
+    expect(before?.eligibility).toEqual({ allowed: true });
+
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({
+      ok: true,
+      value: { signalId: id },
+    });
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toMatchObject({ ok: true });
+    const rows = await ports.repo.listParticipants(id);
+    expect(rows.map((entry) => [entry.userId, entry.state])).toEqual([[DEMO_USERS.marc, 'joined']]);
+    const joinedEvents = (await ports.repo.listAnalytics()).filter(
+      (event) => event.name === 'participant_joined' && event.targetId === id,
+    );
+    expect(joinedEvents).toHaveLength(1);
+
+    const after = await getSignalDetail(ports, { viewerId: DEMO_USERS.marc, signalId: id });
+    expect(after).toMatchObject({ isHost: false, hostPowers: [], responses: [], viewerJoined: true });
+    expect(await closeSignal(ports, { hostId: DEMO_USERS.marc, signalId: id })).toEqual({ ok: false, reason: 'not_host' });
+    // As a participant, the proposer may now report the outcome — like anyone who joined.
+    expect((await recordLocalOutcome(ports, { actorId: DEMO_USERS.marc, signalId: id })).ok).toBe(true);
+    // The host sees them on the list and keeps every power over the list, the proposer included.
+    const asHost = await getSignalDetail(ports, { viewerId: DEMO_USERS.lea, signalId: id });
+    expect(asHost?.participants.map((person) => person.id)).toEqual([DEMO_USERS.marc]);
+    expect(
+      await removeParticipant(ports, { hostId: DEMO_USERS.lea, signalId: id, userId: DEMO_USERS.marc, exclude: true }),
+    ).toMatchObject({ ok: true });
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({
+      ok: false,
+      reason: 'host_excluded',
+    });
+  });
+
+  it('counts a proposer who joined as a participant for matching, with the host as organizer', async () => {
+    const id = await hosted();
+    await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id });
+    const signal = await ports.repo.getSignal(id);
+    if (signal === null) throw new Error('missing');
+    const described = describeSignal(signal, { joinedIds: [DEMO_USERS.marc], timezone: 'Europe/Paris', now: ports.now() });
+    expect(described?.participation.organizerId).toBe(DEMO_USERS.lea);
+    expect(described === null ? [] : activeParticipants(described.participation).ids).toEqual([DEMO_USERS.marc]);
+  });
+
+  it('keeps every participation check for the proposer', async () => {
+    // Blocked with the host.
+    let id = await hosted();
+    await blockUser(ports, { actorId: DEMO_USERS.lea, targetId: DEMO_USERS.marc });
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({ ok: false, reason: 'blocked' });
+
+    // Suspended, full, closed and expired.
+    ports = createDemoPorts();
+    id = await hosted();
+    await setState(DEMO_USERS.marc, 'suspended');
+    expect((await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).ok).toBe(false);
+    await setState(DEMO_USERS.marc, 'active');
+    const signal = await ports.repo.getSignal(id);
+    if (signal === null) throw new Error('missing');
+    await ports.repo.putSignal({ ...signal, capacity: 1 });
+    expect((await joinSignal(ports, { actorId: DEMO_USERS.hugo, signalId: id })).ok).toBe(true);
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({
+      ok: false,
+      reason: 'signal_full',
+    });
+    await ports.repo.putSignal({ ...signal, state: 'closed' });
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({
+      ok: false,
+      reason: 'signal_not_open',
+    });
+    await ports.repo.putSignal({ ...signal, expiresAt: '2026-08-16T11:00:00.000Z' });
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({
+      ok: false,
+      reason: 'signal_not_open',
+    });
+  });
+
+  it('still refuses the proposer on a hostless proposal, and the creator-host of an ordinary signal', async () => {
+    const id = await proposal();
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.marc, signalId: id })).toEqual({ ok: false, reason: 'self' });
+    const created = await createSignal(ports, {
+      actorId: DEMO_USERS.lea,
+      type: 'join',
+      title: 'Hosted paddle',
+      body: '',
+      geoScopeId: CITY_IDS.ajaccio,
+    });
+    if (!created.ok) throw new Error('setup failed');
+    expect(await joinSignal(ports, { actorId: DEMO_USERS.lea, signalId: created.value.signalId })).toEqual({
+      ok: false,
+      reason: 'self',
+    });
   });
 
   it('shows offers to the proposer only, and each volunteer only their own', async () => {

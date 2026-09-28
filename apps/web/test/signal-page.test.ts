@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSignal, type AccountState } from '@indenoi/core';
+import { confirmHost, createSignal, joinSignal, publishProposal, volunteerToHost, type AccountState } from '@indenoi/core';
 import { DEMO_USERS } from '@indenoi/db/demo';
 import { CITY_IDS } from '@indenoi/geo';
 
@@ -66,6 +66,64 @@ async function setState(userId: string, accountState: AccountState): Promise<voi
 beforeEach(() => {
   resetStore();
   session.viewerId = null;
+});
+
+async function marcProposalHostedByLea(): Promise<string> {
+  const ports = getStore().ports;
+  const published = await publishProposal(ports, {
+    actorId: DEMO_USERS.marc,
+    input: {
+      practice: 'Paddle',
+      geoScopeId: CITY_IDS.ajaccio,
+      slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+      durationMinutes: 90,
+    },
+    proposalKey: 'page-host-0001',
+  });
+  if (!published.ok) throw new Error(`setup failed: ${published.reason}`);
+  const signalId = published.value.signalId;
+  await volunteerToHost(ports, { actorId: DEMO_USERS.lea, signalId });
+  const confirmed = await confirmHost(ports, { proposerId: DEMO_USERS.marc, signalId, volunteerId: DEMO_USERS.lea });
+  if (!confirmed.ok) throw new Error(`setup failed: ${confirmed.reason}`);
+  return signalId;
+}
+
+describe('the rendered page of a proposal hosted by somebody else', () => {
+  it('offers the proposer the ordinary join action, and no host controls', async () => {
+    const id = await marcProposalHostedByLea();
+    const html = await render(DEMO_USERS.marc, id);
+    expect(html).toContain('Hosted by Léa');
+    expect(html).toContain('You are not on the list unless you join');
+    expect(html).toContain('Ask to join');
+    expect(html).not.toContain('Close it to new people');
+    expect(html).not.toContain('Remove');
+  });
+
+  it('shows the proposer as on the list once they joined, still without host controls', async () => {
+    const id = await marcProposalHostedByLea();
+    const joined = await joinSignal(getStore().ports, { actorId: DEMO_USERS.marc, signalId: id });
+    if (!joined.ok) throw new Error('join failed');
+    const html = await render(DEMO_USERS.marc, id);
+    expect(html).toContain('You are on the list');
+    expect(html).not.toContain('Close it to new people');
+  });
+
+  it('keeps the proposer of a hostless proposal without any participation action', async () => {
+    const published = await publishProposal(getStore().ports, {
+      actorId: DEMO_USERS.marc,
+      input: {
+        practice: 'Paddle',
+        geoScopeId: CITY_IDS.ajaccio,
+        slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+        durationMinutes: 90,
+      },
+      proposalKey: 'page-host-0002',
+    });
+    if (!published.ok) throw new Error('setup failed');
+    const html = await render(DEMO_USERS.marc, published.value.signalId);
+    expect(html).toContain('Your proposal. It has no host yet');
+    expect(html).not.toContain('Ask to join');
+  });
 });
 
 describe('the rendered signal page', () => {

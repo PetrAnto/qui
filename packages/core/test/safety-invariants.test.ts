@@ -448,8 +448,19 @@ describe('INV-HOST-3 a proposal gets a host only by volunteer consent plus propo
     expect(canJoinEvent(joiner, hostedProposal, proposer, withHost, 0, NOW, host).reason).toBe('blocked');
     const withProposer = createSafetyGraph([{ id: 'b', blockerId: joiner.id, blockedId: proposer.id, createdAt: T0 }]);
     expect(canJoinEvent(joiner, hostedProposal, proposer, withProposer, 0, NOW, host).reason).toBe('blocked');
-    expect(canJoinEvent(proposer, hostedProposal, proposer, graph, 0, NOW, host).reason).toBe('self');
+    // The proposer is an ordinary participant once somebody else hosts: they may
+    // join explicitly, under the same checks; the host never joins their own.
+    expect(canJoinEvent(proposer, hostedProposal, proposer, graph, 0, NOW, host)).toEqual({ allowed: true });
+    expect(canJoinEvent(proposer, hostedProposal, proposer, withHost, 0, NOW, host)).toEqual({ allowed: true });
+    const proposerBlocked = createSafetyGraph([{ id: 'b', blockerId: host.id, blockedId: proposer.id, createdAt: T0 }]);
+    expect(canJoinEvent(proposer, hostedProposal, proposer, proposerBlocked, 0, NOW, host).reason).toBe('blocked');
+    expect(canJoinEvent(proposer, { ...hostedProposal, capacity: 1 }, proposer, graph, 1, NOW, host).reason).toBe(
+      'signal_full',
+    );
     expect(canJoinEvent(host, hostedProposal, proposer, graph, 0, NOW, host).reason).toBe('self');
+    // A hostless proposal and a creator-hosted signal still refuse their creator.
+    expect(canJoinEvent(proposer, proposal, proposer, graph, 0, NOW).reason).toBe('self');
+    expect(canJoinEvent(proposer, signal('s-o', proposer.id, 'join'), proposer, graph, 0, NOW).reason).toBe('self');
     // Host power belongs to the designated host only.
     for (const power of ['accept_response', 'remove_participant', 'exclude_participant', 'close_participation'] as const) {
       expect(canExerciseHostPower(proposer, hostedProposal, power).reason).toBe('not_host');

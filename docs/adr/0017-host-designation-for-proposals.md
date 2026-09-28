@@ -30,7 +30,14 @@ Neither person can act alone:
 - a proposer cannot name somebody who did not offer (`no_host_offer`);
 - a volunteer cannot confirm themself, and a third party cannot confirm anyone
   (`not_proposer`);
-- the proposer cannot host their own proposal (`self`).
+- the proposer cannot volunteer for their own proposal (`self`).
+
+**Self-hosting is unsupported in this slice. It is not a new permanent
+prohibition.** P1 names "one adult with a local tie to that place, confirmed by
+the proposer". It does not settle whether the proposer may be that adult. This
+slice implements only the case where the host is somebody else. Allowing a
+proposer to host their own proposal is left open for a later owner decision,
+and is not implemented here.
 
 ### 2. The existing host requirements, checked twice
 
@@ -65,8 +72,22 @@ opened.
 
 From then on, the existing hosted Join rules apply unchanged:
 - **The designated host alone holds host powers** (`INV-HOST-2`).
-- **The proposer holds none.** Their confirmation gives them no powers, no
-  participation, and no outcome report.
+- **The proposer holds no host power.** Publishing and confirming join nobody,
+  the proposer included.
+- **The proposer may take part like anyone eligible.** Once somebody else is
+  the host, the proposer may join explicitly through the ordinary Join flow.
+  Every check applies: an active account, blocks with the host, host
+  exclusion, audience, capacity and lifecycle. Having joined, they are a
+  participant like any other:
+  - they may report the outcome (`INV-OUTCOME-1`);
+  - the host may remove or exclude them (`INV-HOST-1`).
+
+  For matching, the designated host is the organizer (`activity/describe.ts`),
+  so a proposer who joined counts as a participant.
+
+  The designated host still never joins their own gathering (`self`). So does
+  the creator-host of an ordinary signal, and so does the proposer of a hostless
+  proposal.
 - **Eligibility is checked against both people.** A block with, or the
   suspension of, *either* the proposer or the designated host refuses a join or
   a response. `canRespondToSignal` refuses (`not_host`) any caller that does
@@ -102,6 +123,7 @@ designate a host. Production persistence stays out of scope.
 - A proposal can now become a hosted Join without changing identity, so the
   journey is complete: search → propose → volunteer → confirm → join.
 - **Not implemented** (none of these is approved):
+  - self-hosting by the proposer (unsupported in this slice, see §1);
   - replacing a host, or a host withdrawing;
   - a proposer or volunteer withdrawing an offer;
   - group messaging, equipment UI, payments.
@@ -113,9 +135,6 @@ designate a host. Production persistence stays out of scope.
   - The signal page's safety menu (report, block) targets the proposer. The
     designated host can be reported or blocked from their profile, which the
     "Hosted by" card links to.
-  - The matcher's descriptive model (`activity/describe.ts`) still names the
-    proposer as `organizerId`. It grants no power; it only counts
-    participation.
   - Two simultaneous identical first offers can write two `host_offered` audit
     rows. The offer itself is an upsert, so the state stays single.
 

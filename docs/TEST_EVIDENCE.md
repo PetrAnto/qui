@@ -21,7 +21,7 @@ activity proposals, ADR-0017 / `INV-HOST-3`; same command).
 
 ```
 Test Files  26 passed (26)
-     Tests  409 passed (409)
+     Tests  416 passed (416)
 ```
 
 | Project | File | Tests |
@@ -37,7 +37,7 @@ Test Files  26 passed (26)
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
 | db | `test/proposals.test.ts` | 18 |
-| db | `test/host-designation.test.ts` | 28 |
+| db | `test/host-designation.test.ts` | 32 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -48,7 +48,7 @@ Test Files  26 passed (26)
 | web | `test/ui.test.ts` | 14 |
 | web | `test/api.test.ts` | 23 |
 | web | `test/activity-draft.test.ts` | 20 |
-| web | `test/signal-page.test.ts` | 5 |
+| web | `test/signal-page.test.ts` | 8 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
@@ -234,16 +234,18 @@ The journey tests assert that no publish, join or respond request is sent.
 - a failed verification shows an unverified state with a retry, keeps the key,
   and never publishes on its own.
 
-`e2e/host-designation.spec.ts` adds **3 tests** for host designation
+`e2e/host-designation.spec.ts` adds **4 tests** for host designation
 (ADR-0017):
 - Marc proposes → Léa offers to host → Marc confirms Léa → "Hosted by Léa" on
   the same activity, windows kept → Hugo joins through the existing Join
   button → Léa holds the host controls, Marc holds none;
+- once Léa hosts, Marc joins his own proposal explicitly — one join request,
+  "You are on the list", no host controls, and Léa sees him on her list;
 - a minor and an adult with no local tie are told why they cannot offer, and
   the proposer is never offered to host their own proposal;
 - an existing hosted signal shows no host-designation controls.
 
-Total e2e: **41 tests**. Where they were executed for this branch is recorded in
+Total e2e: **42 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:
