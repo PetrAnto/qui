@@ -61,11 +61,23 @@ export function canReadSignal(
   signal: Signal,
   author: ActorView,
   graph: SafetyGraph,
+  /** The designated host, when it is not the author (a hosted proposal, ADR-0017). */
+  host: ActorView | null = null,
 ): Decision {
   if (signal.state === 'removed') return deny('content_removed');
   if (viewer.id === author.id) return ALLOW;
   if (graph.isBlockedBetween(viewer.id, author.id)) return deny('blocked');
   if (author.accountState === 'suspended') return deny('author_suspended');
+  // A designated host other than the author is named on the signal, so the
+  // same block (INV-BLOCK-1) and suspension rules apply to them. A caller that
+  // does not supply them is refused rather than checked against the author.
+  if (signal.hostId !== null && signal.hostId !== author.id) {
+    if (host === null || host.id !== signal.hostId) return deny('not_host');
+    if (viewer.id !== host.id) {
+      if (graph.isBlockedBetween(viewer.id, host.id)) return deny('blocked');
+      if (host.accountState === 'suspended') return deny('author_suspended');
+    }
+  }
   return canSeeAudience(viewer, signal.audience);
 }
 
@@ -82,10 +94,22 @@ export function canViewSignal(
   signal: Signal,
   author: ActorView,
   graph: SafetyGraph,
+  host: ActorView | null = null,
 ): Decision {
-  const readable = canReadSignal(viewer, signal, author, graph);
+  const readable = canReadSignal(viewer, signal, author, graph, host);
   if (!readable.allowed) return readable;
   if (viewer.id !== author.id && author.accountState === 'distribution_restricted') {
+    return deny('distribution_restricted');
+  }
+  // A restricted designated host is not amplified through a proposal either.
+  if (
+    host !== null &&
+    host.id === signal.hostId &&
+    host.id !== author.id &&
+    viewer.id !== author.id &&
+    viewer.id !== host.id &&
+    host.accountState === 'distribution_restricted'
+  ) {
     return deny('distribution_restricted');
   }
   return ALLOW;

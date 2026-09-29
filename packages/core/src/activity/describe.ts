@@ -36,7 +36,8 @@ export function describeSignal(
   if (plan !== null) {
     // An activity proposal (ADR-0016): its windows stay candidate windows,
     // only a *required* level is a stated fact about it, and cost stays
-    // unknown. The proposer is not a participant and holds no place.
+    // unknown. Publishing makes the proposer neither a participant nor a
+    // place-holder; they count only if they explicitly join a hosted one.
     return {
       signalId: signal.id,
       geoScopeId: signal.geoScopeId,
@@ -50,7 +51,10 @@ export function describeSignal(
       },
       capacity: { places: signal.capacity, counts: 'includes_organizer' },
       participation: {
-        organizerId: signal.creatorId,
+        // The organizer is whoever is responsible for the gathering: the
+        // designated host once there is one (ADR-0017). A proposer who joined
+        // is then counted as the participant they are.
+        organizerId: signal.hostId ?? signal.creatorId,
         organizerParticipates: false,
         participantIds: context.joinedIds,
       },

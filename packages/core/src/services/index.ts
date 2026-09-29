@@ -3,3 +3,4 @@ export * from './read';
 export * from './write';
 export * from './search';
 export * from './proposals';
+export * from './hosting';

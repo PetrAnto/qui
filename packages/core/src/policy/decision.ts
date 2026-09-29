@@ -29,6 +29,9 @@ export type PolicyReason =
   | 'no_city_attachment'
   | 'proposal_adults_only'
   | 'awaiting_host'
+  | 'already_hosted'
+  | 'not_proposer'
+  | 'no_host_offer'
   | 'moderation_private';
 
 /**

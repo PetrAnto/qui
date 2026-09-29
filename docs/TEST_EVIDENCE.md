@@ -12,29 +12,32 @@ branch, Node 22.23.1, `vitest run --maxWorkers=1`; re-run after the review
 rounds on `b904670` and `258dd44`).
 Updated: **2026-09-25** (branch `feat/activity-search-preview`: activity search,
 results and proposal preview; same command).
+Updated: **2026-09-27** (branch `feat/host-designation`: host designation for
+activity proposals, ADR-0017 / `INV-HOST-3`; same command).
 
 ## Unit and integration suite — PASSING
 
 `pnpm test` (vitest, 4 projects: `core`, `geo`, `db`, `web`).
 
 ```
-Test Files  25 passed (25)
-     Tests  371 passed (371)
+Test Files  26 passed (26)
+     Tests  418 passed (418)
 ```
 
 | Project | File | Tests |
 |---|---|---|
-| core | `test/safety-invariants.test.ts` | 49 |
+| core | `test/safety-invariants.test.ts` | 56 |
 | core | `test/activity.test.ts` | 45 |
 | core | `test/search-input.test.ts` | 9 |
 | core | `test/capabilities.test.ts` | 10 |
 | core | `test/ranking.test.ts` | 7 |
 | core | `test/analytics.test.ts` | 6 |
 | core | `test/features.test.ts` | 4 |
-| db | `test/d1.test.ts` | 21 |
+| db | `test/d1.test.ts` | 22 |
 | db | `test/flows.test.ts` | 16 |
 | db | `test/participation.test.ts` | 29 |
 | db | `test/proposals.test.ts` | 18 |
+| db | `test/host-designation.test.ts` | 33 |
 | db | `test/search.test.ts` | 11 |
 | db | `test/signal-visibility.test.ts` | 13 |
 | db | `test/demo-data.test.ts` | 9 |
@@ -43,9 +46,9 @@ Test Files  25 passed (25)
 | geo | `test/gazetteer.test.ts` | 14 |
 | web | `test/routes.test.ts` | 22 |
 | web | `test/ui.test.ts` | 14 |
-| web | `test/api.test.ts` | 21 |
+| web | `test/api.test.ts` | 23 |
 | web | `test/activity-draft.test.ts` | 20 |
-| web | `test/signal-page.test.ts` | 5 |
+| web | `test/signal-page.test.ts` | 9 |
 | web | `test/landing-hero.test.ts` | 6 |
 | web | `test/search-sequence.test.ts` | 6 |
 | web | `test/deploy-script.test.ts` | 1 |
@@ -57,14 +60,14 @@ this entry; a file cannot name the SHA of the commit that contains it.
 
 ## Safety gate — PASSING
 
-`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **49
-tests** in `safety-invariants.test.ts` cover the 19 invariants listed in [SAFETY.md](SAFETY.md):
-`INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`,
+`pnpm test:safety` filters the same suite to the `INV-` invariant tests. **56
+tests** in `safety-invariants.test.ts` cover the 22 invariants listed in [SAFETY.md](SAFETY.md):
+`INV-AGE-1..4`, `INV-BLOCK-1`, `INV-DM-1`, `INV-HOST-1`, `INV-HOST-2`, `INV-HOST-3`,
 `INV-MOD-1`, `INV-KYC-1`, `INV-KYC-2`, `INV-SOCIAL-1`, `INV-GEO-1`,
 `INV-PROFILE-1`, `INV-ROMANCE-1`, `INV-SUSPEND-1`, `INV-OUTCOME-1`, `INV-PROPOSAL-1`,
 `INV-ANALYTICS-1`, `INV-DEMO-1`, `INV-CACHE-1`. The filter also matches the
 `INV-DEMO-1` and `INV-ANALYTICS-1` tests in `features.test.ts` and
-`analytics.test.ts`, so the gate reports more than 49.
+`analytics.test.ts`, so the gate reports more than 56.
 
 CI runs this as a separate named job so a safety regression is legible as such.
 
@@ -231,7 +234,18 @@ The journey tests assert that no publish, join or respond request is sent.
 - a failed verification shows an unverified state with a retry, keeps the key,
   and never publishes on its own.
 
-Total e2e: **38 tests**. Where they were executed for this branch is recorded in
+`e2e/host-designation.spec.ts` adds **4 tests** for host designation
+(ADR-0017):
+- Marc proposes → Léa offers to host → Marc confirms Léa → "Hosted by Léa" on
+  the same activity, windows kept → Hugo joins through the existing Join
+  button → Léa holds the host controls, Marc holds none;
+- once Léa hosts, Marc joins his own proposal explicitly — one join request,
+  "You are on the list", no host controls, and Léa sees him on her list;
+- a minor and an adult with no local tie are told why they cannot offer, and
+  the proposer is never offered to host their own proposal;
+- an existing hosted signal shows no host-designation controls.
+
+Total e2e: **42 tests**. Where they were executed for this branch is recorded in
 its pull request.
 
 Recorded local runs:

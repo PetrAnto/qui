@@ -654,6 +654,16 @@ export function createD1Repository(database: D1Database): Repository {
         db.insert(s.participants).values(participant),
       ]);
     },
+    // Activity proposals — and so host offers and designation — are not
+    // persisted by D1 yet (ADR-0016). No stored row is a proposal, so there
+    // is never an offer to list; writes refuse rather than drop data.
+    listHostOffers: async () => [],
+    putHostOffer: async () => {
+      throw new Error('D1 does not persist activity proposals yet (ADR-0016)');
+    },
+    assignSignalHost: async () => {
+      throw new Error('D1 does not persist activity proposals yet (ADR-0016)');
+    },
     listHostExclusions: async () => {
       const rows = await db.select().from(s.hostExclusions).orderBy(INSERTION);
       return rows.map((row) => ({

@@ -9,6 +9,7 @@ import type {
   GeoAttachment,
   GeoScope,
   HostExclusion,
+  HostOffer,
   Message,
   ModerationAction,
   ModerationCase,
@@ -96,6 +97,7 @@ export function createInMemoryRepository(seed: SeedData = EMPTY_SEED): Repositor
   const responses = new Map(seed.responses.map((response) => [response.id, response]));
   let participants = [...seed.participants];
   const exclusions = [...seed.exclusions];
+  let hostOffers: HostOffer[] = [];
   const threads = new Map(seed.threads.map((thread) => [thread.id, thread]));
   const messages = [...seed.messages];
   let blocks = [...seed.blocks];
@@ -194,6 +196,22 @@ export function createInMemoryRepository(seed: SeedData = EMPTY_SEED): Repositor
       if (signals.has(signal.id)) return false;
       signals.set(signal.id, signal);
       return true;
+    },
+    // One synchronous read-check-write: no other caller can interleave.
+    assignSignalHost: async (signalId, hostId) => {
+      const current = signals.get(signalId);
+      if (current === undefined || current.hostId !== null) return false;
+      signals.set(signalId, { ...current, hostId });
+      return true;
+    },
+    listHostOffers: async (signalId) => hostOffers.filter((offer) => offer.signalId === signalId),
+    putHostOffer: async (offer) => {
+      hostOffers = [
+        ...hostOffers.filter(
+          (entry) => !(entry.signalId === offer.signalId && entry.volunteerId === offer.volunteerId),
+        ),
+        offer,
+      ];
     },
     listResponses: async (filter) => {
       const all = [...responses.values()];

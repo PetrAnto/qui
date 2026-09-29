@@ -13,6 +13,7 @@ import { POST as onboard } from '../app/api/onboarding/route';
 import { GET as people } from '../app/api/people/route';
 import { POST as createPost } from '../app/api/posts/route';
 import { GET as profile } from '../app/api/profiles/[handle]/route';
+import { POST as volunteerToHost, PUT as confirmHost } from '../app/api/signals/[id]/host-offers/route';
 import { GET as signalDetail } from '../app/api/signals/[id]/route';
 import { POST as track } from '../app/api/track/route';
 import { GET as threads } from '../app/api/threads/route';
@@ -46,6 +47,12 @@ describe('every route refuses an anonymous caller', () => {
       createInvite(request('/api/invites', { method: 'POST', body: '{}' })),
       searchActivitiesRoute(request('/api/activities/search', { method: 'POST', body: '{}' })),
       publishProposalRoute(request('/api/activities/proposals', { method: 'POST', body: '{}' })),
+      volunteerToHost(request('/api/signals/s/host-offers', { method: 'POST' }), {
+        params: Promise.resolve({ id: 's' }),
+      }),
+      confirmHost(request('/api/signals/s/host-offers', { method: 'PUT', body: '{}' }), {
+        params: Promise.resolve({ id: 's' }),
+      }),
     ]);
     for (const response of responses) {
       expect(response.status).toBe(401);

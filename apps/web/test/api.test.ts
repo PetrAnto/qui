@@ -11,6 +11,7 @@ import { GET as searchCities, POST as addCity } from '../app/api/cities/route';
 import { GET as insights } from '../app/api/insights/route';
 import { POST as report } from '../app/api/reports/route';
 import { POST as createSignal } from '../app/api/signals/route';
+import { POST as volunteerRoute, PUT as confirmRoute } from '../app/api/signals/[id]/host-offers/route';
 import { POST as join, PUT as reportOutcome } from '../app/api/signals/[id]/join/route';
 import { POST as respond } from '../app/api/signals/[id]/respond/route';
 import { POST as setSession } from '../app/api/session/route';
@@ -75,6 +76,74 @@ describe('INV-CACHE-1 personalised responses are never cacheable', () => {
     );
     const body = (await second.json()) as { appreciated: boolean };
     expect(body.appreciated).toBe(true);
+  });
+});
+
+describe('designating the host of a proposal', () => {
+  async function proposalId(): Promise<string> {
+    const response = await publishProposalRoute(
+      request('/api/activities/proposals', {
+        method: 'POST',
+        as: DEMO_USERS.marc,
+        body: JSON.stringify({
+          practice: 'paddle',
+          geoScopeId: CITY_IDS.ajaccio,
+          slots: [{ date: '2026-08-18', part: 'afternoon', preferred: false }],
+          durationMinutes: 90,
+          proposalKey: 'api-host-0001',
+        }),
+      }),
+    );
+    return ((await response.json()) as { signalId: string }).signalId;
+  }
+
+  function offer(id: string, as?: string): Promise<Response> {
+    return volunteerRoute(request(`/api/signals/${id}/host-offers`, { method: 'POST', as }), {
+      params: Promise.resolve({ id }),
+    });
+  }
+
+  function confirm(id: string, as: string | undefined, body: unknown): Promise<Response> {
+    return confirmRoute(
+      request(`/api/signals/${id}/host-offers`, { method: 'PUT', as, body: JSON.stringify(body) }),
+      { params: Promise.resolve({ id }) },
+    );
+  }
+
+  it('offers (201, then 200), confirms (201, then 200), and then lets an eligible adult join', async () => {
+    const id = await proposalId();
+    const first = await offer(id, DEMO_USERS.lea);
+    expect(first.status).toBe(201);
+    expect(first.headers.get('cache-control')).toBe('private, no-store');
+    expect((await offer(id, DEMO_USERS.lea)).status).toBe(200);
+
+    const confirmed = await confirm(id, DEMO_USERS.marc, { volunteerId: DEMO_USERS.lea });
+    expect(confirmed.status).toBe(201);
+    expect(await confirmed.json()).toEqual({ hostId: DEMO_USERS.lea, designated: true });
+    expect((await confirm(id, DEMO_USERS.marc, { volunteerId: DEMO_USERS.lea })).status).toBe(200);
+
+    const joined = await join(request(`/api/signals/${id}/join`, { method: 'POST', as: DEMO_USERS.hugo }), {
+      params: Promise.resolve({ id }),
+    });
+    expect(joined.status).toBe(201);
+  });
+
+  it('refuses anonymous callers, self-confirmation, third parties and malformed bodies', async () => {
+    const id = await proposalId();
+    expect((await offer(id)).status).toBe(401);
+    expect((await confirm(id, undefined, { volunteerId: DEMO_USERS.lea })).status).toBe(401);
+    expect((await offer(id, DEMO_USERS.ines)).status).toBe(403);
+    await offer(id, DEMO_USERS.lea);
+    for (const as of [DEMO_USERS.lea, DEMO_USERS.hugo]) {
+      const refused = await confirm(id, as, { volunteerId: DEMO_USERS.lea });
+      expect(refused.status).toBe(403);
+      expect(await refused.json()).toEqual({ reason: 'not_proposer' });
+    }
+    const unoffered = await confirm(id, DEMO_USERS.marc, { volunteerId: DEMO_USERS.hugo });
+    expect(await unoffered.json()).toEqual({ reason: 'no_host_offer' });
+    expect((await confirm(id, DEMO_USERS.marc, {})).status).toBe(400);
+    expect((await getStore().ports.repo.getSignal(id))?.hostId).toBeNull();
+    expect((await offer('sig-missing', DEMO_USERS.lea)).status).toBe(404);
   });
 });
 

@@ -182,7 +182,9 @@ age and locality rules.
 **Owner decision, 2026-09-26:** **P1 and P5 are approved** for the adult-only
 synthetic demo and recorded in
 [ADR-0016](adr/0016-activity-proposals-without-host.md). Designating a host (the
-rest of P1) is not implemented yet. **P2–P4 and P6–P7 remain unapproved.**
+rest of P1) is implemented in
+[ADR-0017](adr/0017-host-designation-for-proposals.md). **P2–P4 and P6–P7 remain
+unapproved.**
 
 | # | Rule | Proposed exact change | Kind |
 |---|---|---|---|
@@ -260,6 +262,7 @@ still requires `host`. Proposals go through `publishProposal`.
 | Read-only activity search | `services/search.ts`, `POST /api/activities/search` | wired, tested |
 | Search → results → preview screen | `app/search`, `components/ActivitySearch.tsx` | wired, e2e |
 | Publishing the preview as a hostless proposal (ADR-0016) | `services/proposals.ts`, `POST /api/activities/proposals` | wired, e2e |
+| Host designation: volunteer offers, proposer confirms (ADR-0017) | `services/hosting.ts`, `POST`/`PUT /api/signals/:id/host-offers`, `components/HostDesignation.tsx` | wired, e2e |
 
 **Search, results and preview (synthetic demo).**
 
