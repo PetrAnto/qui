@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { getDiscoverFeed } from '@indenoi/core';
+import { getDiscoverFeed, getPeopleInCity } from '@indenoi/core';
 
 import { CityBar } from '../components/CityBar';
+import { DiscoverDarkPreview } from '../components/DiscoverDarkPreview';
 import { PostCard } from '../components/PostCard';
 import { TrackView } from '../components/TrackView';
 import { resolveActiveCity, resolveCityAccess } from '../lib/city';
@@ -20,8 +21,16 @@ export const dynamic = 'force-dynamic';
  * fresh a piece of content is, whether it is from a place this viewer is
  * attached to, whether it touches something they said they care about, and how
  * it landed locally.
+ *
+ * `?theme=dark` renders the owner-approved dark visual variant of this same
+ * page (docs/design/DISCOVER_DARK_PREVIEW.md). Only the presentation differs:
+ * the data, ranking, actions and permissions are the ones below.
  */
-export default async function DiscoverPage() {
+export default async function DiscoverPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ theme?: string | string[] }>;
+}) {
   const viewerId = await currentUserId();
   if (viewerId === null) redirect('/welcome');
 
@@ -30,6 +39,17 @@ export default async function DiscoverPage() {
   const access = await resolveCityAccess(store, viewerId, city.id);
   const feed = await getDiscoverFeed(store, { viewerId, activeGeoScopeId: city.id });
   const now = store.now();
+  const { theme } = await searchParams;
+
+  if (theme === 'dark') {
+    const people = await getPeopleInCity(store, { viewerId, geoScopeId: city.id });
+    return (
+      <>
+        <TrackView name="discover_impression" geoScopeId={city.id} />
+        <DiscoverDarkPreview city={city} access={access} cards={feed?.cards ?? null} people={people} now={now} />
+      </>
+    );
+  }
 
   return (
     <>

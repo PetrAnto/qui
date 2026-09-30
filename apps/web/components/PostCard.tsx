@@ -28,11 +28,18 @@ export function PostCard({
   actions,
   breakdown,
   now,
+  layout = 'default',
 }: {
   post: PublicPost;
   actions: readonly ContextualAction[];
   breakdown?: Readonly<Record<string, number>>;
   now: string;
+  /**
+   * `person-first` leads with who made it and gives the first available action
+   * the primary style. Used only by the dark Discover preview; the default
+   * card is unchanged.
+   */
+  layout?: 'default' | 'person-first';
 }) {
   const router = useRouter();
   const [appreciated, setAppreciated] = useState(post.viewerAppreciated);
@@ -57,23 +64,34 @@ export function PostCard({
       post.id,
     )}${post.practice === null ? '' : `&practice=${encodeURIComponent(post.practice)}`}`;
 
+  const personFirst = layout === 'person-first';
+  const leadAction = personFirst ? actions.find((action) => action.enabled)?.kind : undefined;
+  const author = (
+    <div className={personFirst ? 'row postcard__person' : 'row'}>
+      <Avatar media={post.author.avatar} displayName={post.author.displayName} />
+      <div>
+        <Link
+          href={`/p/${post.author.handle}`}
+          className={personFirst ? 'postcard__name' : undefined}
+          style={personFirst ? undefined : { fontWeight: 650 }}
+        >
+          {post.author.displayName}
+        </Link>
+        <div className="faint">
+          {post.cityName} · {relativeTime(post.createdAt, now)}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <article className="card">
+    <article className={personFirst ? 'card postcard--person' : 'card'}>
+      {personFirst ? author : null}
       <Art media={post.media} />
       <div className="postcard__body">
-        <div className="row">
-          <Avatar media={post.author.avatar} displayName={post.author.displayName} />
-          <div>
-            <Link href={`/p/${post.author.handle}`} style={{ fontWeight: 650 }}>
-              {post.author.displayName}
-            </Link>
-            <div className="faint">
-              {post.cityName} · {relativeTime(post.createdAt, now)}
-            </div>
-          </div>
-        </div>
+        {personFirst ? null : author}
 
-        <p>{post.caption}</p>
+        <p className={personFirst ? 'postcard__caption' : undefined}>{post.caption}</p>
 
         <div className="row row--wrap">
           {post.practice !== null ? <span className="chip chip--context">{post.practice}</span> : null}
@@ -97,7 +115,7 @@ export function PostCard({
             action.kind === 'see_activity' ? (
               <Link
                 key={action.kind}
-                className="btn btn--small"
+                className={action.kind === leadAction ? 'btn btn--small btn--primary' : 'btn btn--small'}
                 href={`/p/${post.author.handle}`}
                 aria-disabled={!action.enabled}
               >
@@ -106,7 +124,7 @@ export function PostCard({
             ) : (
               <Link
                 key={action.kind}
-                className="btn btn--small"
+                className={action.kind === leadAction ? 'btn btn--small btn--primary' : 'btn btn--small'}
                 href={action.enabled ? compose(action.signalType ?? 'ask') : '#'}
                 aria-disabled={!action.enabled}
                 data-disabled={!action.enabled}
