@@ -57,7 +57,9 @@ export function DiscoverDarkPreview({
       </nav>
 
       <header className="pagehead dd-hero">
-        <h1>What people here actually do</h1>
+        <h1>
+          What people here <em>actually do</em>
+        </h1>
         <p className="pagehead__sub">
           Not opinions about the news. Somebody&apos;s morning, their workshop, their Tuesday
           session — and a way to be part of it.

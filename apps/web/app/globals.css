@@ -1212,22 +1212,25 @@ fieldset.stack {
  * Owner-approved visual experiment for Discover only, reached at `/?theme=dark`
  * (docs/design/DISCOVER_DARK_PREVIEW.md). Every rule below is keyed on the
  * `.discover-dark` marker that only that variant renders, so the light theme
- * and every other screen are unchanged. The palette is proposed, derived from
- * a written brief and tuned for WCAG AA; it is not canonical.
+ * and every other screen are unchanged. The palette is proposed: sampled from
+ * the owner's reference image, then adjusted where needed for WCAG AA. It is
+ * not canonical.
  */
 
 :root:has(.discover-dark) {
   color-scheme: dark;
 
-  /* Proposed dark palette — not consumed directly below. */
-  --qui-night: #120d0a; /* deep warm black: page */
-  --qui-night-raised: #1c1612; /* cards, sheets */
-  --qui-night-subtle: #271e18; /* chips, quiet fills */
-  --qui-ember: #e86a30; /* burnt orange: primary action fill */
-  --qui-ember-text: #f5955e; /* ember as text/indicator on night (8.6:1) */
+  /* Proposed dark palette (sampled from the reference; see the design note). */
+  --qui-night: #0b0806; /* near-black, warm: page */
+  --qui-night-raised: #16100c; /* cards, sheets */
+  --qui-night-subtle: #211913; /* chips, quiet fills */
+  --qui-ember: #be4014; /* burnt orange: action fill, headline accent (3.7:1, large/non-text) */
+  --qui-ember-text: #f5955e; /* ember as small text/indicator (8.4:1 on raised) */
+  --qui-glow: #e86b1f; /* portrait rings */
   --qui-amber: #f3b34e; /* restrained highlight: focus, small accents */
-  --qui-cream: #f6eddf; /* primary text (16.6:1 on night) */
-  --qui-sand: #d2c0aa; /* secondary text (10.9:1) */
+  --qui-cream: #f6eddf; /* primary text (17.2:1 on night) */
+  --qui-heading: #e6cba4; /* sand-cream headline (12.8:1) */
+  --qui-sand: #d2c0aa; /* secondary text (10.7:1 on raised) */
 
   /* The existing semantic tokens, remapped. --color-brand stays canonical
      Coral: it colours the Q symbol, which is not recoloured. */
@@ -1240,8 +1243,10 @@ fieldset.stack {
   --color-line: #3b2e25;
   --color-line-strong: #806a55; /* control outlines, 3.5:1 on raised */
   --color-brand-strong: var(--qui-ember-text);
-  --color-on-brand: var(--qui-night); /* on ember: 6.0:1 */
+  --color-on-brand: var(--qui-night);
   --color-action: var(--qui-ember);
+  /* The reference's peach label (#f1ccb3) is 3.6:1 on ember; this is 4.85:1. */
+  --color-on-action: #fbf3e8;
   --color-highlight: var(--qui-amber);
   --color-accent-secondary: #1e3944; /* Deep Teal, deepened for night */
   --color-on-dark: #d8e8ee;
@@ -1290,6 +1295,7 @@ fieldset.stack {
 
 :root:has(.discover-dark) .skip-link {
   background: var(--color-action);
+  color: var(--color-on-action);
 }
 
 /* Keyboard focus: a wide amber ring reads on every dark surface (10:1). */
@@ -1310,7 +1316,7 @@ fieldset.stack {
 .discover-dark .btn--primary {
   background: var(--color-action);
   border-color: transparent;
-  color: var(--color-on-brand);
+  color: var(--color-on-action);
 }
 
 .discover-dark .btn--small {
@@ -1373,8 +1379,26 @@ fieldset.stack {
 
 .dd-hero h1 {
   font-size: clamp(2rem, 1.3rem + 2.8vw, 3rem);
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   line-height: 1.06;
+  color: var(--qui-heading);
+}
+
+/* The reference's accent word and short rule — large text, 3.7:1 on night. */
+.dd-hero h1 em {
+  font-style: normal;
+  color: var(--color-action);
+}
+
+.dd-hero h1::after {
+  content: '';
+  display: block;
+  width: 3rem;
+  height: 3px;
+  margin-top: 0.85rem;
+  border-radius: 2px;
+  background: var(--color-action);
 }
 
 .dd-hero .pagehead__sub {
@@ -1412,8 +1436,9 @@ fieldset.stack {
 
 .dd-people__list {
   list-style: none;
-  margin: 0;
-  padding: 0 0 0.25rem;
+  /* Room for the ring's glow inside the scroll box, which would clip it. */
+  margin: -0.5rem -0.5rem 0;
+  padding: 0.5rem 0.5rem 0.25rem;
   display: flex;
   gap: 0.9rem;
   overflow-x: auto;
@@ -1425,7 +1450,7 @@ fieldset.stack {
 }
 
 .dd-person {
-  width: 5.25rem;
+  width: 5.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1435,15 +1460,19 @@ fieldset.stack {
   text-align: center;
 }
 
-/* One neutral ring for every person: framing, never a status halo (canon §7). */
+/* The reference's lit ring — the same for every person: framing, never a
+   status halo (canon §7). */
 .discover-dark .avatar {
-  border: 2px solid var(--color-line-strong);
-  box-shadow: 0 0 0 3px var(--color-surface);
+  border: 2px solid var(--qui-glow);
+  box-shadow:
+    0 0 0 3px var(--color-surface),
+    0 0 14px 2px hsl(22 82% 52% / 0.4);
 }
 
 .dd-person .avatar--lg {
-  width: 4.25rem;
-  height: 4.25rem;
+  width: 4.75rem;
+  height: 4.75rem;
+  font-size: 1.35rem;
 }
 
 .dd-person__name {
