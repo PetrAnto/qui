@@ -13,6 +13,12 @@
   "observability": {
     "enabled": true
   },
+  // The public synthetic demo (ADR-0015) is served at qui.social as a Workers
+  // Custom Domain, and stays reachable on workers.dev for verification and
+  // rollback. Deploy only through the host's audited wrapper
+  // (.ai/cloudflare.deploy.json); its preflight confirms the zone first.
+  "workers_dev": true,
+  "routes": [{ "pattern": "qui.social", "custom_domain": true }],
   // No Cloudflare account id is stored here. Auth is process-local
   // (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN). A public *synthetic*
   // demo may be deployed (ADR-0015); real-user production stays fail-closed.
