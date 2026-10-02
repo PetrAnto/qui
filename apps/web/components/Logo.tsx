@@ -29,6 +29,12 @@ interface SymbolProps {
   readonly expressive?: boolean;
   /** One-color variant: Ink for light surfaces, Ivory for dark ones. */
   readonly mono?: Mono;
+  /**
+   * The surface the full-color symbol sits on. On a dark surface the Ink tail
+   * would vanish, so it reads Ivory — the same treatment as the app icon
+   * (`app/icon.svg`). Geometry and the Coral ring are unchanged.
+   */
+  readonly surface?: 'light' | 'dark';
   readonly title?: string;
 }
 
@@ -36,9 +42,9 @@ const CORAL = 'var(--color-brand)';
 const INK = '#0f1b2b';
 const IVORY = '#faf8f4';
 
-export function LogoSymbol({ size = 28, expressive = true, mono, title }: SymbolProps) {
+export function LogoSymbol({ size = 28, expressive = true, mono, surface = 'light', title }: SymbolProps) {
   const ring = mono === 'dark' ? INK : mono === 'light' ? IVORY : CORAL;
-  const tail = mono === 'light' ? IVORY : INK;
+  const tail = mono === 'light' || (mono === undefined && surface === 'dark') ? IVORY : INK;
   return (
     <svg
       viewBox="0 0 64 64"

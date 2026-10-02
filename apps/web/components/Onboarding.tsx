@@ -43,7 +43,12 @@ function facetList(value: string): string[] {
  * that is the thing that decides whether you can publish there as a local, and
  * a GPS fix cannot tell us any of it.
  */
-export function Onboarding() {
+export function Onboarding({
+  landing = '/',
+}: {
+  /** Where a finished entry lands: Discover, or the dark Discover preview. */
+  landing?: '/' | '/?theme=dark';
+} = {}) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('age');
   const [age, setAge] = useState('');
@@ -83,7 +88,7 @@ export function Onboarding() {
     // Only this finished onboarding, after the explicit Continue, may resume
     // the search once on arrival.
     if (next === '/search') markResumeReady();
-    router.push(next ?? '/');
+    router.push(next ?? landing);
     router.refresh();
   }
 
