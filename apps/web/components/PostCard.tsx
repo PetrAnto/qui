@@ -87,11 +87,20 @@ export function PostCard({
   return (
     <article className={personFirst ? 'card postcard--person' : 'card'}>
       {personFirst ? author : null}
-      <Art media={post.media} />
+      {personFirst ? null : <Art media={post.media} />}
       <div className="postcard__body">
         {personFirst ? null : author}
 
-        <p className={personFirst ? 'postcard__caption' : undefined}>{post.caption}</p>
+        {personFirst ? (
+          // The caption leads; the generated artwork, still labelled, sits
+          // beside it as a thumbnail instead of filling the card.
+          <div className="postcard__lead">
+            <p className="postcard__caption">{post.caption}</p>
+            <Art media={post.media} className="art postcard__thumb" />
+          </div>
+        ) : (
+          <p>{post.caption}</p>
+        )}
 
         <div className="row row--wrap">
           {post.practice !== null ? <span className="chip chip--context">{post.practice}</span> : null}

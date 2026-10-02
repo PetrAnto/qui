@@ -1347,16 +1347,29 @@ fieldset.stack {
 
 /* ---- header */
 
+/* Compact on purpose: at 390×844 and 1440×900 the first post's author,
+   caption and first action are visible without scrolling. */
 .discover-dark {
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  gap: 0.75rem;
 }
 
 .dd-top {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+}
+
+.dd-top__city {
+  flex: 1;
+  min-width: 0;
+}
+
+.dd-modes {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .dd-preview {
@@ -1366,6 +1379,19 @@ fieldset.stack {
   gap: 0.6rem;
   font-size: 0.8rem;
   color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+/* On a phone the link alone says it; the label stays for screen readers. */
+@media (max-width: 30rem) {
+  .dd-preview__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 .dd-preview a {
@@ -1378,7 +1404,7 @@ fieldset.stack {
 }
 
 .dd-hero h1 {
-  font-size: clamp(2rem, 1.3rem + 2.8vw, 3rem);
+  font-size: clamp(1.55rem, 1.2rem + 1.6vw, 2.4rem);
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.06;
@@ -1396,15 +1422,15 @@ fieldset.stack {
   display: block;
   width: 3rem;
   height: 3px;
-  margin-top: 0.85rem;
+  margin-top: 0.5rem;
   border-radius: 2px;
   background: var(--color-action);
 }
 
 .dd-hero .pagehead__sub {
-  font-size: 1rem;
-  line-height: 1.55;
-  max-width: 36rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  max-width: 40rem;
 }
 
 /* ---- people strip: circular framing, the same for everyone */
@@ -1413,7 +1439,6 @@ fieldset.stack {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.35rem;
 }
 
 .dd-people h2 {
@@ -1437,10 +1462,10 @@ fieldset.stack {
 .dd-people__list {
   list-style: none;
   /* Room for the ring's glow inside the scroll box, which would clip it. */
-  margin: -0.5rem -0.5rem 0;
-  padding: 0.5rem 0.5rem 0.25rem;
+  margin: -0.35rem -0.35rem 0;
+  padding: 0.35rem;
   display: flex;
-  gap: 0.9rem;
+  gap: 0.5rem;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1449,15 +1474,23 @@ fieldset.stack {
   display: none;
 }
 
+/* Compact pills: avatar and name, the same shape for everyone. */
 .dd-person {
-  width: 5.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.85rem 0.3rem 0.3rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+  white-space: nowrap;
+}
+
+.dd-person__text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0;
-  border-radius: var(--radius-sm);
-  text-align: center;
+  line-height: 1.2;
 }
 
 /* The reference's lit ring — the same for every person: framing, never a
@@ -1469,10 +1502,11 @@ fieldset.stack {
     0 0 14px 2px hsl(22 82% 52% / 0.4);
 }
 
-.dd-person .avatar--lg {
-  width: 4.75rem;
-  height: 4.75rem;
-  font-size: 1.35rem;
+.dd-person .avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 0.85rem;
+  box-shadow: 0 0 10px 1px hsl(22 82% 52% / 0.35);
 }
 
 .dd-person__name {
@@ -1484,7 +1518,7 @@ fieldset.stack {
 .dd-person__practice {
   font-size: 0.72rem;
   color: var(--color-text-faint);
-  max-width: 100%;
+  max-width: 8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1495,18 +1529,18 @@ fieldset.stack {
 .dd-feed {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1rem;
 }
 
 .postcard--person .postcard__person {
-  padding: 0.7rem 1rem 0.8rem;
-  gap: 0.75rem;
+  padding: 0.5rem 1rem 0;
+  gap: 0.7rem;
 }
 
 .postcard--person .postcard__person .avatar {
-  width: 3.25rem;
-  height: 3.25rem;
-  font-size: 1rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 0.95rem;
 }
 
 .postcard__name {
@@ -1522,16 +1556,36 @@ fieldset.stack {
   margin-top: -0.55rem;
 }
 
-.postcard--person .art {
-  width: auto;
-  margin: 0 0.75rem;
+.postcard--person .postcard__body {
+  padding: 0.6rem 1rem 1rem;
+  gap: 0.7rem;
+}
+
+.postcard__lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.postcard__lead .postcard__caption {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The generated artwork as a labelled thumbnail, never the card's bulk. */
+.postcard__thumb {
+  flex: none;
+  width: 5.5rem;
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
-.postcard--person .postcard__body {
-  padding: 0.9rem 1rem 1rem;
-  gap: 0.8rem;
+.postcard__thumb .art__label {
+  left: 0.3rem;
+  bottom: 0.3rem;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.66rem;
 }
 
 .postcard__caption {
@@ -1571,7 +1625,7 @@ fieldset.stack {
   }
 
   :root:has(.discover-dark) .app__main {
-    padding: 1.5rem 2.25rem 3rem 16rem;
+    padding: 1rem 2.25rem 3rem 16rem;
   }
 
   :root:has(.discover-dark) .site-footer {
@@ -1612,8 +1666,8 @@ fieldset.stack {
     background: var(--color-surface-subtle);
   }
 
-  .dd-hero h1 {
-    max-width: 40rem;
+  .postcard__thumb {
+    width: 7.5rem;
   }
 
   .dd-feed {

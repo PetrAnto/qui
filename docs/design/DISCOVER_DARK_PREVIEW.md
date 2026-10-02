@@ -39,7 +39,7 @@ Adjusted after the comparison:
 - burnt-orange action fill with a light label;
 - lighter-weight sand-cream headline with an ember accent on "actually do" and a short ember rule;
 - lit orange rings on every avatar;
-- slightly larger avatars in the people strip.
+- slightly larger avatars in the people strip (later made compact; see "First viewport").
 
 Not taken from the reference: the glowing network lines, particles, city scenery and walking figure. Everyday content areas stay calm. Taken as inspiration only, never reproduced:
 - **Its raster wordmark.** The canon's custom wordmark still has no vector master, so the variant uses the existing Q symbol geometry (`LogoSymbol`), not a lettered wordmark.
@@ -69,10 +69,10 @@ The people strip is a preview of the existing People mode. It shows `getPeopleIn
 
 Changes to presentation only:
 
-- **Person first.** Each card leads with its author, with a larger circular avatar and the name at 1.05rem. The first available action takes the primary style (`PostCard layout="person-first"`). The default card is unchanged.
+- **Person first.** Each card leads with its author: a circular avatar and the name at 1.05rem. The caption comes next, with the generated artwork beside it as a labelled thumbnail (88px on a phone, 120px on desktop) instead of filling the card. The first available action takes the primary style (`PostCard layout="person-first"`). The default card is unchanged.
 - **Circular framing, the same for everyone.** Every avatar gets the same lit orange ring with a soft glow, as in the reference's portraits. Nothing encodes status: no VIP halo and no badge (canon §7).
 - **Light accent.** A single low-alpha ember glow sits behind the page head. There are no particles, networks or scenery in content areas.
-- **Typography.** The heading runs 32–48px, weight 600, in sand-cream, with "actually do" as the ember accent and a short ember rule below. The body is 16px/1.55. The font stays the current system stack.
+- **Typography.** The heading runs about 25–38px, weight 600, in sand-cream, with "actually do" as the ember accent and a short ember rule below. The intro copy is 14.4px/1.45; captions are 16px/1.5. The font stays the current system stack.
 - **Desktop at 64rem and above.** The same five destinations become a left rail, and the feed becomes two columns. These are the canon §1.2 desktop pattern, applied here only.
 - **Targets.** Every link and control in the variant clears 44×44 CSS px. Card actions wrap instead of scrolling, so no label breaks and no focus ring is clipped.
 - **Focus.** A 3px amber ring with a 2px offset, at 10:1 on the page.
@@ -103,6 +103,19 @@ Changes to presentation only:
 
 Burnt orange `#be4014` is used only for actions and the headline accent. It is deeper than Coral, and whether it should replace Coral for actions in any wider dark theme is **OPEN**.
 
+## First viewport
+
+The page is compacted so that actual content appears before any scrolling. At 390×844 and 1440×900, the first post's author, its caption and its first contextual action are fully visible: below the demo banner, and above the bottom navigation on a phone. To get there:
+
+- **Two header rows.** The Q symbol shares the city row, and "Switch to light" shares the For you / People row. On a phone the "Dark preview" label is visually hidden but still read by screen readers.
+- **Tighter spacing.** The section gap is 12px, and the heading and its rule are smaller.
+- **A compact people strip.** It is a single row of pills (avatar, name, first practice). It scrolls sideways, and "See everyone" opens the People mode.
+- **Smaller artwork.** The generated artwork becomes a thumbnail beside the caption. It keeps its "generated" label and its accessible description.
+
+Nothing was removed. Every action, the safety menu, the city picker, the policy filters and the 44×44 CSS px targets are unchanged.
+
+When the first post is the viewer's own, its contextual actions are disabled, as they are in the light Discover. The first action is then visible but not primary.
+
 ## Verified at 390px and 1440px
 
 Verified against a local build. The exact revision and results are in the review archive's `verification.json`.
@@ -126,6 +139,8 @@ The strip is the People mode's data: `getPeopleInCity`, which applies `canDiscov
 - it shows no minor to an adult;
 - it drops a person blocked in either direction, and a suspended account;
 - the light Discover renders no strip.
+
+The test reads the strip by its `dd-person__name` class, so it does not depend on the layout.
 
 ## Not done here
 

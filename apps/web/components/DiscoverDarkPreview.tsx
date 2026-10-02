@@ -37,24 +37,29 @@ export function DiscoverDarkPreview({
 }) {
   return (
     <div className="discover-dark">
+      {/* One row for brand and city, one for modes and the way back to light:
+          the feed starts in the first screen (design note, "First viewport"). */}
       <div className="dd-top">
-        <LogoSymbol size={34} surface="dark" title="QUI" />
+        <LogoSymbol size={30} surface="dark" title="QUI" />
+        <div className="dd-top__city">
+          <CityBar cityName={city.name} cityId={city.id} access={access} />
+        </div>
+      </div>
+
+      <div className="dd-modes">
+        <nav className="segmented" aria-label="Discover modes">
+          <Link className="btn btn--small btn--primary" href="/?theme=dark" aria-current="page">
+            For you
+          </Link>
+          <Link className="btn btn--small" href="/people">
+            People
+          </Link>
+        </nav>
         <p className="dd-preview">
-          <span>Dark preview</span>
+          <span className="dd-preview__label">Dark preview</span>
           <Link href="/">Switch to light</Link>
         </p>
       </div>
-
-      <CityBar cityName={city.name} cityId={city.id} access={access} />
-
-      <nav className="segmented" aria-label="Discover modes">
-        <Link className="btn btn--small btn--primary" href="/?theme=dark" aria-current="page">
-          For you
-        </Link>
-        <Link className="btn btn--small" href="/people">
-          People
-        </Link>
-      </nav>
 
       <header className="pagehead dd-hero">
         <h1>
@@ -76,11 +81,13 @@ export function DiscoverDarkPreview({
             {people.map((person) => (
               <li key={person.id}>
                 <Link className="dd-person" href={`/p/${person.handle}`}>
-                  <Avatar media={person.avatar} displayName={person.displayName} large />
-                  <span className="dd-person__name">{person.displayName}</span>
-                  {person.practices[0] !== undefined ? (
-                    <span className="dd-person__practice">{person.practices[0]}</span>
-                  ) : null}
+                  <Avatar media={person.avatar} displayName={person.displayName} />
+                  <span className="dd-person__text">
+                    <span className="dd-person__name">{person.displayName}</span>
+                    {person.practices[0] !== undefined ? (
+                      <span className="dd-person__practice">{person.practices[0]}</span>
+                    ) : null}
+                  </span>
                 </Link>
               </li>
             ))}
