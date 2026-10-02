@@ -26,16 +26,17 @@ vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND');
   },
-  redirect: () => {
-    throw new Error('NEXT_REDIRECT');
+  redirect: (url: string) => {
+    throw new Error(`NEXT_REDIRECT ${url}`);
   },
   useRouter: () => ({ push: () => undefined, refresh: () => undefined }),
   usePathname: () => '/',
 }));
 
 const { default: DiscoverPage } = await import('../app/page');
+const { default: WelcomePage } = await import('../app/welcome/page');
 
-async function render(viewerId: string, theme?: string): Promise<string> {
+async function render(viewerId: string | null, theme?: string): Promise<string> {
   session.viewerId = viewerId;
   const element = await DiscoverPage({ searchParams: Promise.resolve(theme === undefined ? {} : { theme }) });
   return renderToStaticMarkup(element);
@@ -61,6 +62,27 @@ async function setState(userId: string, accountState: AccountState): Promise<voi
 beforeEach(() => {
   resetStore();
   session.viewerId = null;
+});
+
+describe('a fresh visitor keeps the dark Discover through the demo entry', () => {
+  it('sends an anonymous visitor to the entry with the dark choice, and only that one', async () => {
+    await expect(render(null, 'dark')).rejects.toThrow('NEXT_REDIRECT /welcome?theme=dark');
+    for (const theme of [undefined, 'light', 'DARK', 'https://example.com']) {
+      await expect(render(null, theme)).rejects.toThrow(/^NEXT_REDIRECT \/welcome$/);
+    }
+  });
+
+  it('lands a signed-in visitor on the dark Discover only when asked exactly', async () => {
+    session.viewerId = DEMO_USERS.lea;
+    await expect(WelcomePage({ searchParams: Promise.resolve({ theme: 'dark' }) })).rejects.toThrow(
+      /^NEXT_REDIRECT \/\?theme=dark$/,
+    );
+    for (const theme of [undefined, 'evil', '//example.com']) {
+      await expect(WelcomePage({ searchParams: Promise.resolve(theme === undefined ? {} : { theme }) })).rejects.toThrow(
+        /^NEXT_REDIRECT \/$/,
+      );
+    }
+  });
 });
 
 describe('the dark Discover people strip follows the central discovery policy', () => {

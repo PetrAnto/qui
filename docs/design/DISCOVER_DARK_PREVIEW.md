@@ -1,6 +1,6 @@
 # Dark Discover preview
 
-**Status: HYPOTHESIS.** This is a reviewable visual experiment, not the product theme. Broader adoption is pending the owner's visual review.
+**Status:** owner-approved on 2026-10-02 for the public synthetic demo, as a Discover-only variant. It remains a **HYPOTHESIS** for any wider adoption: it is not the product theme, and no other screen is dark.
 
 ## Decision it records
 
@@ -48,7 +48,9 @@ Not taken from the reference: the glowing network lines, particles, city scenery
 
 ## How to open it
 
-Open `/?theme=dark` while signed in to the demo. The exact value `dark` is required; anything else renders the light Discover.
+Open `/?theme=dark`. The exact value `dark` is required; anything else renders the light Discover.
+
+A fresh visitor without a demo session is sent to `/welcome?theme=dark`. When the entry is finished, the onboarding lands them on `/?theme=dark` rather than `/`. A visitor who is already signed in and opens `/welcome?theme=dark` lands there too. Only that one value is carried through; the welcome page itself is unchanged. This is covered by `apps/web/test/discover-dark.test.ts` and `e2e/discover-dark.spec.ts`.
 
 The variant renders a `.discover-dark` marker. Every rule in the "dark Discover preview" section of `apps/web/app/globals.css` is keyed on that marker, through `:root:has(.discover-dark)` or `.discover-dark`. As a result:
 

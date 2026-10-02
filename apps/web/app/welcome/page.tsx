@@ -17,8 +17,17 @@ export const dynamic = 'force-dynamic';
  * you, where are you, what do you do. City is a search, not a privileged
  * dropdown; the age answer goes through the same policy as everything else.
  */
-export default async function WelcomePage() {
-  if ((await currentUserId()) !== null) redirect('/');
+export default async function WelcomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ theme?: string | string[] }>;
+}) {
+  // `?theme=dark` only chooses where the finished entry lands: the dark
+  // Discover preview (docs/design/DISCOVER_DARK_PREVIEW.md). This page itself
+  // is unchanged, and only the exact value `dark` is honoured.
+  const { theme } = await searchParams;
+  const landing = theme === 'dark' ? '/?theme=dark' : '/';
+  if ((await currentUserId()) !== null) redirect(landing);
 
   return (
     <div className="welcome">
@@ -34,7 +43,7 @@ export default async function WelcomePage() {
             actually do. No location permission, no document upload, no follower import.
           </p>
         </header>
-        <Onboarding />
+        <Onboarding landing={landing} />
       </section>
     </div>
   );

@@ -31,15 +31,17 @@ export default async function DiscoverPage({
 }: {
   searchParams: Promise<{ theme?: string | string[] }>;
 }) {
+  const { theme } = await searchParams;
   const viewerId = await currentUserId();
-  if (viewerId === null) redirect('/welcome');
+  // A fresh visitor who asked for the dark Discover keeps that choice through
+  // the demo entry. Only the exact value `dark` is carried; nothing else is.
+  if (viewerId === null) redirect(theme === 'dark' ? '/welcome?theme=dark' : '/welcome');
 
   const store = ports();
   const city = await resolveActiveCity(store, viewerId);
   const access = await resolveCityAccess(store, viewerId, city.id);
   const feed = await getDiscoverFeed(store, { viewerId, activeGeoScopeId: city.id });
   const now = store.now();
-  const { theme } = await searchParams;
 
   if (theme === 'dark') {
     const people = await getPeopleInCity(store, { viewerId, geoScopeId: city.id });
