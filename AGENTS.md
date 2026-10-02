@@ -74,9 +74,14 @@ execution constraint.
    to `false` and only an exact `'true'` string enables them (`INV-DEMO-1`).
 6. **Never branch on which city it is.** Geography is data, not code
    ([ADR-0004](docs/adr/0004-geography.md)).
-7. **Do not deploy, provision, push, or configure a Cloudflare account** from
-   this repo. `wrangler.jsonc` intentionally has no account id and no D1 id.
-   See [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
+7. **Real-user production stays fail-closed; the public *synthetic* demo may
+   be deployed** ([ADR-0015](docs/adr/0015-public-synthetic-demo.md)). The demo
+   deploys only through the host's audited deploy wrapper, with every production
+   capability flag `false`, synthetic identities, the demo banner, and no D1 or
+   KYC provisioning. Never provision real-user infrastructure, and never touch
+   unrelated Cloudflare zones or resources. `wrangler.jsonc` intentionally has
+   no account id and no D1 id. See
+   [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
 
 ## Where things belong
 

@@ -1,0 +1,22 @@
+{
+  "provider": "cloudflare",
+  "repository": "PetrAnto/qui",
+  "default_branch": "main",
+  "deployments": {
+    "check": {
+      "preflight_commands": [
+        ["node", "scripts/cf-preflight.mjs", "--hostname", "qui.social", "--worker", "qui-demo"]
+      ],
+      "deploy_command": ["pnpm", "--filter", "web", "exec", "wrangler", "deployments", "status", "--json"],
+      "verify_urls": ["https://qui-demo.petrantonft.workers.dev/welcome"]
+    },
+    "demo": {
+      "preflight_commands": [
+        ["node", "scripts/cf-preflight.mjs", "--hostname", "qui.social", "--worker", "qui-demo"],
+        ["pnpm", "--filter", "web", "exec", "wrangler", "deployments", "status", "--json"]
+      ],
+      "deploy_command": ["pnpm", "--filter", "web", "run", "deploy"],
+      "verify_urls": ["https://qui-demo.petrantonft.workers.dev/welcome"]
+    }
+  }
+}
