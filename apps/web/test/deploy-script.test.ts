@@ -24,6 +24,34 @@ const packageJson = JSON.parse(
   readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
 ) as PackageJson;
 
+/** wrangler.jsonc with its whole-line `//` comments removed. */
+const wrangler = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../wrangler.jsonc', import.meta.url)), 'utf8')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .join('\n'),
+) as {
+  name: string;
+  workers_dev?: boolean;
+  routes?: readonly { pattern: string; custom_domain?: boolean }[];
+  vars: Readonly<Record<string, string>>;
+  d1_databases?: unknown;
+};
+
+describe('demo deploy target (ADR-0015)', () => {
+  it('serves only the synthetic demo at qui.social, with workers.dev kept', () => {
+    expect(wrangler.name).toBe('qui-demo');
+    expect(wrangler.workers_dev).toBe(true);
+    expect(wrangler.routes).toEqual([{ pattern: 'qui.social', custom_domain: true }]);
+  });
+
+  it('keeps every production capability off and provisions no database', () => {
+    expect(Object.values(wrangler.vars).length).toBeGreaterThan(0);
+    for (const [key, value] of Object.entries(wrangler.vars)) expect(value, key).toBe('false');
+    expect(wrangler.d1_databases).toBeUndefined();
+  });
+});
+
 describe('web deploy script', () => {
   it('builds before deploying so a clean checkout can deploy', () => {
     const deploy = packageJson.scripts?.['deploy'] ?? '';
