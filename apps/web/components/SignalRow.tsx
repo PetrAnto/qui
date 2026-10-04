@@ -26,7 +26,7 @@ export function SignalRow({
   return (
     <article className="card card--pad stack stack--tight">
       <div className="row row--wrap">
-        <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
+        <span className={signal.hostless ? 'chip' : 'chip chip--accent'}>{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
         {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
         {!signal.hostless && signal.plan !== null ? (
@@ -35,7 +35,7 @@ export function SignalRow({
         <span className="faint spacer">{relativeTime(signal.createdAt, now)}</span>
       </div>
 
-      <Link href={`/signals/${signal.id}`}>
+      <Link className="signalrow__title" href={`/signals/${signal.id}`}>
         <h2>{signal.title}</h2>
       </Link>
       <p className="muted">{signal.body}</p>
