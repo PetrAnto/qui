@@ -88,13 +88,17 @@ async function marcProposalHostedByLea(): Promise<string> {
   return signalId;
 }
 
+/** The ordinary join action, as rendered. */
+const JOIN_BUTTON = /<button[^>]*>Join<\/button>/;
+
 describe('the rendered page of a proposal hosted by somebody else', () => {
   it('offers the proposer the ordinary join action, and no host controls', async () => {
     const id = await marcProposalHostedByLea();
     const html = await render(DEMO_USERS.marc, id);
     expect(html).toContain('Hosted by Léa');
-    expect(html).toContain('You are not on the list unless you join');
-    expect(html).toContain('Ask to join');
+    expect(html).toContain('Join if you want to take part');
+    // Joining is immediate, so the action says so directly.
+    expect(html).toMatch(JOIN_BUTTON);
     expect(html).not.toContain('Close it to new people');
     expect(html).not.toContain('Remove');
   });
@@ -104,8 +108,21 @@ describe('the rendered page of a proposal hosted by somebody else', () => {
     const joined = await joinSignal(getStore().ports, { actorId: DEMO_USERS.marc, signalId: id });
     if (!joined.ok) throw new Error('join failed');
     const html = await render(DEMO_USERS.marc, id);
-    expect(html).toContain('You are on the list');
+    // One consistent message: no "join if you want to" once they have joined.
+    expect(html).toContain('You proposed this and you are on the list');
+    expect(html).not.toContain('Join if you want to take part');
+    expect(html).not.toMatch(JOIN_BUTTON);
+    // The joined state is information, not a disabled primary action.
+    expect(html).toMatch(/role="status"[^>]*>.*You are on the list/s);
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*You are on the list/);
     expect(html).not.toContain('Close it to new people');
+  });
+
+  it('puts the viewer’s part before the details', async () => {
+    const id = await marcProposalHostedByLea();
+    const html = await render(DEMO_USERS.hugo, id);
+    expect(html.indexOf('aria-label="Your part"')).toBeGreaterThan(-1);
+    expect(html.indexOf('aria-label="Your part"')).toBeLessThan(html.indexOf('Possible times'));
   });
 
   it('does not expose a suspended host to the proposer on the rendered page', async () => {
@@ -116,7 +133,7 @@ describe('the rendered page of a proposal hosted by somebody else', () => {
     expect(html).not.toContain('Hosted by');
     expect(html).not.toContain('Léa');
     expect(html).not.toContain('demo-lea');
-    expect(html).not.toContain('Ask to join');
+    expect(html).not.toMatch(JOIN_BUTTON);
     expect(html).not.toContain('Close it to new people');
     expect(html).not.toContain('no host yet');
     expect(html).not.toContain('Offer to host');
@@ -136,7 +153,9 @@ describe('the rendered page of a proposal hosted by somebody else', () => {
     if (!published.ok) throw new Error('setup failed');
     const html = await render(DEMO_USERS.marc, published.value.signalId);
     expect(html).toContain('Your proposal. It has no host yet');
-    expect(html).not.toContain('Ask to join');
+    expect(html).not.toMatch(JOIN_BUTTON);
+    // Nothing presents it as joinable: no coral action chip on its type.
+    expect(html).not.toContain('chip chip--accent">Join<');
   });
 });
 

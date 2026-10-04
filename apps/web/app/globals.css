@@ -77,8 +77,8 @@ body {
 body {
   background: var(--color-surface);
   color: var(--color-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -102,6 +102,8 @@ h1,
 h2,
 h3 {
   margin: 0;
+  /* Geist at the canon's heading weight (01_BRAND_SYSTEM.md §4.3). */
+  font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
@@ -146,8 +148,8 @@ p {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.5rem var(--page);
-  padding-top: calc(0.5rem + env(safe-area-inset-top));
+  padding: 0.15rem var(--page);
+  padding-top: calc(0.15rem + env(safe-area-inset-top));
   background: var(--color-warning-surface);
   border-bottom: 1px solid hsl(38 92% 32% / 0.3);
   color: var(--color-warning);
@@ -166,6 +168,9 @@ p {
 
 .banner a {
   margin-left: auto;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
   text-decoration: underline;
   white-space: nowrap;
 }
@@ -207,6 +212,65 @@ p {
 .tabbar__glyph {
   font-size: 1.15rem;
   line-height: 1;
+}
+
+/* ---- desktop shell: the same five destinations as a left rail (canon 04 §1.2).
+   One implementation for every application screen, light or the dark Discover:
+   colours come from the active tokens. The landing page has no tab bar. */
+
+@media (min-width: 64rem) {
+  .app:not(:has(.welcome)) {
+    max-width: 80rem;
+  }
+
+  .app:not(:has(.welcome)) .app__main {
+    padding: 1rem 2.25rem 3rem 16rem;
+  }
+
+  .app:not(:has(.welcome)) .site-footer {
+    padding: 0 2.25rem 2rem 16rem;
+  }
+
+  /* Light screens keep a readable column beside the rail. */
+  .app:not(:has(.welcome)):not(:has(.discover-dark)) .app__main > * {
+    width: 100%;
+    max-width: 46rem;
+  }
+
+  .tabbar {
+    top: 0;
+    bottom: 0;
+    left: max(0px, calc(50% - 40rem));
+    transform: none;
+    width: 13.5rem;
+    max-width: none;
+    z-index: 10;
+    grid-auto-flow: row;
+    grid-auto-rows: min-content;
+    align-content: start;
+    gap: 0.3rem;
+    padding: 5.25rem 0.9rem 1rem;
+    border-top: 0;
+    border-right: 1px solid var(--color-line);
+    background: var(--color-surface);
+    backdrop-filter: none;
+  }
+
+  .tabbar__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.8rem;
+    min-height: 2.9rem;
+    padding: 0 1rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+  }
+
+  .tabbar__item[data-active='true'] {
+    background: var(--color-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--color-line);
+  }
 }
 
 /* ------------------------------------------------------------------ bits */
@@ -353,8 +417,9 @@ p {
 }
 
 .btn--small {
-  min-height: 2.25rem;
-  padding: 0.35rem 0.75rem;
+  /* Still a 44 CSS px target (canon 04 §15); the slim padding keeps it light. */
+  min-height: 2.75rem;
+  padding: 0.3rem 0.8rem;
   font-size: 0.8rem;
 }
 
@@ -441,6 +506,26 @@ main:focus {
   background: var(--color-warning-surface);
 }
 
+/* A participation state, read as information rather than a disabled button. */
+.participation {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  font-weight: 650;
+  color: var(--color-success);
+}
+
+.participation__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 0.85rem;
+}
+
 .empty {
   padding: 2rem 1rem;
   text-align: center;
@@ -512,6 +597,45 @@ main:focus {
 
 .why summary {
   cursor: pointer;
+  /* A 44 CSS px target, like every other control (canon 04 §15). */
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+
+/* The author's name is the card's way to the person: a full-size target. */
+.postcard__name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  font-weight: 650;
+}
+
+.postcard--person .postcard__name {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.postcard__body > .row:first-child .faint {
+  margin-top: -0.6rem;
+}
+
+/* A signal's title is its link; a person in "Who is coming" is a link too. */
+.signalrow__title {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+a.chip {
+  min-height: 2.75rem;
+  padding-inline: 0.85rem;
+}
+
+a.card.row,
+.card .row:has(> .avatar) {
+  min-height: 2.75rem;
 }
 
 .why dl {
@@ -1270,13 +1394,6 @@ fieldset.stack {
 
 :root:has(.discover-dark) .banner {
   border-bottom-color: hsl(38 80% 60% / 0.25);
-  padding-block: 0.15rem;
-}
-
-:root:has(.discover-dark) .banner a {
-  min-height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
 }
 
 :root:has(.discover-dark) .tabbar {
@@ -1543,14 +1660,7 @@ fieldset.stack {
   font-size: 0.95rem;
 }
 
-.postcard__name {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  font-weight: 700;
-  font-size: 1.05rem;
-}
+
 
 .postcard--person .postcard__person .faint {
   margin-top: -0.55rem;
@@ -1611,59 +1721,24 @@ fieldset.stack {
   font-size: 0.8rem;
 }
 
-.discover-dark .why summary {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-}
 
-/* ---- desktop: the same destinations as a left rail, a wider two-column feed */
+
+/* ---- desktop: the dark Discover uses the width for a two-column feed; the
+   left rail itself is the application-wide one ("desktop shell" above). */
 
 @media (min-width: 64rem) {
-  :root:has(.discover-dark) .app {
-    max-width: 80rem;
-  }
-
-  :root:has(.discover-dark) .app__main {
-    padding: 1rem 2.25rem 3rem 16rem;
-  }
-
-  :root:has(.discover-dark) .site-footer {
-    padding: 0 2.25rem 2rem 16rem;
-  }
-
+  /* As approved: the rail sits on the page colour, items at rail height. */
   :root:has(.discover-dark) .tabbar {
-    top: 0;
-    bottom: 0;
-    left: max(0px, calc(50% - 40rem));
-    transform: none;
-    width: 13.5rem;
-    max-width: none;
-    z-index: 10;
-    grid-auto-flow: row;
-    grid-auto-rows: min-content;
-    align-content: start;
-    gap: 0.3rem;
-    padding: 5.25rem 0.9rem 1rem;
-    border-top: 0;
-    border-right: 1px solid var(--color-line);
     background: var(--color-surface);
-    backdrop-filter: none;
   }
 
   :root:has(.discover-dark) .tabbar__item {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 0.8rem;
     min-height: 2.9rem;
-    padding: 0 1rem;
-    border-radius: 999px;
-    font-size: 0.95rem;
-    letter-spacing: 0;
   }
 
   :root:has(.discover-dark) .tabbar__item[data-active='true'] {
     background: var(--color-surface-subtle);
+    box-shadow: none;
   }
 
   .postcard__thumb {

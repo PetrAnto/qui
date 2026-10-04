@@ -28,7 +28,8 @@ export const SIGNAL_LABELS: Readonly<Record<SignalType, string>> = {
 export const SIGNAL_VERBS: Readonly<Record<SignalType, string>> = {
   ask: 'Answer this',
   offer: 'Take them up on it',
-  join: 'Ask to join',
+  // Joining is immediate (no acceptance step), so the verb says so.
+  join: 'Join',
   event: 'Join the event',
 };
 

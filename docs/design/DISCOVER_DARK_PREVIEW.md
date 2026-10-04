@@ -74,8 +74,8 @@ Changes to presentation only:
 - **Person first.** Each card leads with its author: a circular avatar and the name at 1.05rem. The caption comes next, with the generated artwork beside it as a labelled thumbnail (88px on a phone, 120px on desktop) instead of filling the card. The first available action takes the primary style (`PostCard layout="person-first"`). The default card is unchanged.
 - **Circular framing, the same for everyone.** Every avatar gets the same lit orange ring with a soft glow, as in the reference's portraits. Nothing encodes status: no VIP halo and no badge (canon §7).
 - **Light accent.** A single low-alpha ember glow sits behind the page head. There are no particles, networks or scenery in content areas.
-- **Typography.** The heading runs about 25–38px, weight 600, in sand-cream, with "actually do" as the ember accent and a short ember rule below. The intro copy is 14.4px/1.45; captions are 16px/1.5. The font stays the current system stack.
-- **Desktop at 64rem and above.** The same five destinations become a left rail, and the feed becomes two columns. These are the canon §1.2 desktop pattern, applied here only.
+- **Typography.** The heading runs about 25–38px, weight 600, in sand-cream, with "actually do" as the ember accent and a short ember rule below. The intro copy is 14.4px/1.45; captions are 16px/1.5. The font is Geist Sans, served from the repository (`apps/web/app/fonts/geist`), so the 600 weight renders as designed.
+- **Desktop at 64rem and above.** The same five destinations become a left rail, and the feed becomes two columns. The rail is the application-wide desktop shell (canon §1.2), shared with every light screen; only its colours follow the dark tokens here.
 - **Targets.** Every link and control in the variant clears 44×44 CSS px. Card actions wrap instead of scrolling, so no label breaks and no focus ring is clipped.
 - **Focus.** A 3px amber ring with a 2px offset, at 10:1 on the page.
 
@@ -147,5 +147,4 @@ The test reads the strip by its `dd-person__name` class, so it does not depend o
 ## Not done here
 
 - No product-wide theme and no persisted theme preference.
-- No Geist. The canon asks for it, but it is not integrated anywhere yet.
 - No new media, members, badges or claims.

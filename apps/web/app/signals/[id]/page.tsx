@@ -34,7 +34,8 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
   return (
     <>
       <div className="row row--wrap">
-        <span className="chip chip--accent">{SIGNAL_LABELS[signal.type]}</span>
+        {/* Coral marks something you can act on; a hostless proposal cannot be joined yet. */}
+        <span className={signal.hostless ? 'chip' : 'chip chip--accent'}>{SIGNAL_LABELS[signal.type]}</span>
         {signal.practice !== null ? <span className="chip">{signal.practice}</span> : null}
         {signal.hostless ? <span className="chip chip--context">Proposal · no host yet</span> : null}
         {!signal.hostless && signal.plan !== null ? (
@@ -49,6 +50,62 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
           {signal.cityName} · {relativeTime(signal.createdAt, now)}
         </p>
       </header>
+
+      {/* Your part first: role, participation status and the relevant action come
+          before the details, so a phone shows them without scrolling. */}
+      <section className="stack stack--tight" aria-label="Your part">
+        {signal.hostless && detail.isProposer ? (
+          <>
+            <p className="notice">
+              Your proposal. It has no host yet: nobody can join or answer it, and proposing it gave you
+              no host role. Someone with a local tie to {signal.cityName} can offer to host; you decide
+              whether to confirm them.
+            </p>
+            <ConfirmHost signalId={signal.id} offers={detail.hostOffers} />
+          </>
+        ) : signal.hostless && detail.viewerOffered ? (
+          <p className="notice">
+            You offered to host this. {signal.creator.displayName} decides whether to confirm you; until a
+            host is confirmed, nobody can join.
+          </p>
+        ) : signal.hostless ? (
+          <>
+            <p className="notice notice--warn">{explain(detail.eligibility.reason ?? 'awaiting_host')}</p>
+            {detail.canVolunteer.allowed ? (
+              <VolunteerToHost signalId={signal.id} />
+            ) : (
+              <p className="faint">You cannot offer to host it: {explain(detail.canVolunteer.reason)}</p>
+            )}
+          </>
+        ) : detail.isHost ? (
+          <HostControls
+            signalId={signal.id}
+            responses={detail.responses}
+            participants={detail.participants}
+            canClose={detail.hostPowers.includes('close_participation')}
+          />
+        ) : detail.eligibility.allowed ? (
+          <>
+            {detail.isProposer && designatedHost !== null ? (
+              <p className="notice">
+                {detail.viewerJoined
+                  ? `You proposed this and you are on the list. ${designatedHost.displayName} hosts it and holds the host controls.`
+                  : `You proposed this. ${designatedHost.displayName} hosts it and holds the host controls. Join if you want to take part.`}
+              </p>
+            ) : null}
+            <SignalActions
+              signalId={signal.id}
+              opensPrivateThread={detail.opensPrivateThread}
+              alreadyResponded={detail.viewerResponded}
+              alreadyJoined={detail.viewerJoined}
+              verb={SIGNAL_VERBS[signal.type]}
+              recipient={signal.creator.displayName}
+            />
+          </>
+        ) : (
+          <p className="notice notice--warn">{explain(detail.eligibility.reason)}</p>
+        )}
+      </section>
 
       {signal.body.length > 0 ? <p>{signal.body}</p> : null}
 
@@ -117,56 +174,6 @@ export default async function SignalPage({ params }: { params: Promise<{ id: str
           </Link>
         </section>
       ) : null}
-
-      {signal.hostless && detail.isProposer ? (
-        <>
-          <p className="notice">
-            Your proposal. It has no host yet: nobody can join or answer it, and proposing it gave you
-            no host role. Someone with a local tie to {signal.cityName} can offer to host; you decide
-            whether to confirm them.
-          </p>
-          <ConfirmHost signalId={signal.id} offers={detail.hostOffers} />
-        </>
-      ) : signal.hostless && detail.viewerOffered ? (
-        <p className="notice">
-          You offered to host this. {signal.creator.displayName} decides whether to confirm you; until a
-          host is confirmed, nobody can join.
-        </p>
-      ) : signal.hostless ? (
-        <>
-          <p className="notice notice--warn">{explain(detail.eligibility.reason ?? 'awaiting_host')}</p>
-          {detail.canVolunteer.allowed ? (
-            <VolunteerToHost signalId={signal.id} />
-          ) : (
-            <p className="faint">You cannot offer to host it: {explain(detail.canVolunteer.reason)}</p>
-          )}
-        </>
-      ) : detail.isHost ? (
-        <HostControls
-          signalId={signal.id}
-          responses={detail.responses}
-          participants={detail.participants}
-          canClose={detail.hostPowers.includes('close_participation')}
-        />
-      ) : detail.eligibility.allowed ? (
-        <>
-          {detail.isProposer && designatedHost !== null ? (
-            <p className="notice">
-              You proposed this. {designatedHost.displayName} hosts it and holds the host controls. You
-              are not on the list unless you join.
-            </p>
-          ) : null}
-          <SignalActions
-            signalId={signal.id}
-            opensPrivateThread={detail.opensPrivateThread}
-            alreadyResponded={detail.viewerResponded}
-            alreadyJoined={detail.viewerJoined}
-            verb={SIGNAL_VERBS[signal.type]}
-          />
-        </>
-      ) : (
-        <p className="notice notice--warn">{explain(detail.eligibility.reason)}</p>
-      )}
 
       {detail.participants.length > 0 && !detail.isHost ? (
         <section className="card card--pad stack stack--tight">

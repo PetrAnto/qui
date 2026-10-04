@@ -70,11 +70,7 @@ export function PostCard({
     <div className={personFirst ? 'row postcard__person' : 'row'}>
       <Avatar media={post.author.avatar} displayName={post.author.displayName} />
       <div>
-        <Link
-          href={`/p/${post.author.handle}`}
-          className={personFirst ? 'postcard__name' : undefined}
-          style={personFirst ? undefined : { fontWeight: 650 }}
-        >
+        <Link href={`/p/${post.author.handle}`} className="postcard__name">
           {post.author.displayName}
         </Link>
         <div className="faint">

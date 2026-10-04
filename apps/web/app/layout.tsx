@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 
 import { GEO_ATTRIBUTION } from '@indenoi/geo';
@@ -7,6 +8,19 @@ import { DemoBanner } from '../components/DemoBanner';
 import { TabBar } from '../components/TabBar';
 
 import './globals.css';
+
+/**
+ * Geist Sans, the canon's product typeface (01_BRAND_SYSTEM.md §4.2), served
+ * from this repository (app/fonts/geist — provenance and OFL licence there).
+ * One variable file covers every weight the UI uses, 600 headings included.
+ */
+const geist = localFont({
+  src: './fonts/geist/Geist-Variable.woff2',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  variable: '--font-geist',
+});
 
 export const metadata: Metadata = {
   title: 'QUI — the people around you',
@@ -31,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={geist.variable}>
       <body>
         <a className="skip-link" href="#main">
           Skip to content
