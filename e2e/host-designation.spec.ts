@@ -97,7 +97,7 @@ test('once Léa hosts, Marc can join his own proposal explicitly, once, with no 
   await page.getByRole('button', { name: 'Confirm Léa as host' }).click();
   await expect(page.getByRole('heading', { name: 'Hosted by Léa' })).toBeVisible();
   // Confirming joined nobody: Marc is offered the ordinary action, not put on the list.
-  await expect(page.getByText(/You are not on the list unless you join/)).toBeVisible();
+  await expect(page.getByText(/Join if you want to take part/)).toBeVisible();
 
   const joins = { count: 0 };
   page.on('request', (request) => {
@@ -111,9 +111,11 @@ test('once Léa hosts, Marc can join his own proposal explicitly, once, with no 
   await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Close it to new people' })).toHaveCount(0);
 
-  // After a reload, still joined once and still no host controls.
+  // After a reload, still joined once, one consistent message, no host controls.
   await page.reload();
   await expect(page.getByRole('status').filter({ hasText: 'You are on the list' })).toBeVisible();
+  await expect(page.getByText(/You proposed this and you are on the list/)).toBeVisible();
+  await expect(page.getByText(/Join if you want to take part/)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Who is coming' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Marc', exact: true })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
